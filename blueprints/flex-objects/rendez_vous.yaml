@@ -1,0 +1,212 @@
+title: 'Rendez_vous'
+description: 'Gestion des rendez-vous cabinet'
+type: flex-objects
+
+# Flex Configuration
+config:
+    # Administration Configuration
+    admin:
+        # Admin router (optional)
+        router:
+            path: '/rendez_vous'
+
+        # Admin menu (optional)
+        menu:
+            list:
+                route: '/rendez_vous'
+                title: 'Rendez_vous'
+                icon: fa-calendar
+                # Authorization to collection admin
+                authorize: ['admin.rendez_vous.list', 'admin.super']
+                # Priority -10 .. 10 (highest goes up)
+                priority: 2
+
+        # Admin template type / folder
+        template: default
+
+        # Permissions
+        permissions:
+            # Primary permissions
+            admin.rendez_vous:
+                type: crudpl
+                label: 'Rendez_vous'
+
+        # List view
+        list:
+            title: appointment_date
+            fields:
+                published:
+                    field:
+                        type: toggle
+                        label: Published
+                    width: 8
+                appointment_date:
+                    link: edit
+                    label: Date
+                appointment_hour:
+                    label: Heure
+                status:
+                    label: Statut
+                appointment_type:
+                    label: Type
+                duration_minutes:
+                    label: Duree (min)
+                contact_name:
+                    label: Client
+                contact_uuid:
+                    label: Client_uuid
+                motif:
+                    label: Motif
+                observations:
+                    label: Observations
+
+        # Edit View
+        edit:
+            title:
+                template: ''
+
+        # Preview View
+        preview:
+            enabled: false
+            route:
+            #template: '/plugins/flex-objects/directory:contacts'
+
+        # Data Export
+        export:
+            enabled: true
+            method: 'jsonSerialize'
+            formatter:
+                class: 'Grav\Framework\File\Formatter\YamlFormatter'
+            filename: 'rendez_vous'
+
+    # Site Configuration
+    site:
+        templates:
+            collection:
+                # Lookup for the template layout files for collections of objects
+                paths:
+                    - 'flex/{TYPE}/collection/{LAYOUT}{EXT}'
+            object:
+                # Lookup for the template layout files for objects
+                paths:
+                    - 'flex/{TYPE}/object/{LAYOUT}{EXT}'
+            defaults:
+                # Default template {TYPE}; overridden by filename of this blueprint if template folder exists
+                type: 'rendez_vous'
+                # Default template {LAYOUT}; can be overridden in render calls (usually Twig in templates)
+                layout: default
+
+    # Data Configuration
+    data:
+        # Object class to be used, allowing custom methods for the object
+        #object: 'Grav\Common\Flex\Types\Generic\GenericObject'
+        object: 'Grav\Plugin\Cabinet\Flex\RendezVousObject'   # ← custom class
+
+        # Collection class to be used, allowing custom methods for the collections
+        collection: 'Grav\Common\Flex\Types\Generic\GenericCollection'
+        # Index class to be used, works as a quick database-like lookup index
+        index: 'Grav\Common\Flex\Types\Generic\GenericIndex'
+        storage:
+            # Storage class, use single file storage (does not support images and assets)
+            class: 'Grav\Framework\Flex\Storage\FileStorage'
+            options:
+                formatter:
+                    # File formatter class, in this case the file is stored in markdown
+                    class: 'Grav\Framework\File\Formatter\JsonFormatter'
+                # JSON file where all the objects will be stored
+                folder: user-data://rendez_vous
+        search:
+            # Search options
+            options:
+                contains: 1
+            # Fields to be searched
+            fields:
+                - appointment_date
+                - appointment_hour
+                - status
+                - appointment_type
+                - contact_uuid
+                - motif
+                - observations
+
+form:
+    validation: loose
+    fields:
+        published:
+            type: toggle
+            label: Published
+            highlight: 1
+            default: 1
+            options:
+                1: PLUGIN_ADMIN.YES
+                0: PLUGIN_ADMIN.NO
+            validate:
+                type: bool
+                required: true
+        appointment_date:
+            type: date
+            label: Date
+            format: Y-m-d
+            validate:
+                required: true
+                type: date
+        appointment_hour:
+            type: text
+            label: Heure
+            placeholder: 'HH:MM'
+            validate:
+                required: true
+                pattern: '^(?:[01][0-9]|2[0-3]):[0-5][0-9]$'
+        status:
+            type: select
+            label: Statut
+            default: planned
+            options:
+                planned: Planifie
+                confirmed: Confirme
+                cancelled: Annule
+                done: Effectue
+            validate:
+                required: true
+        appointment_type:
+            type: select
+            label: Type
+            default: shiatsu_futon
+            options:
+                shiatsu_futon: 'Shiatsu futon'
+                shiatsu_chair: 'Shiatsu chair'
+                sophrologie: Sophrologie
+            validate:
+                required: true
+        duration_minutes:
+            type: number
+            label: Duree (minutes)
+            default: 60
+            min: 15
+            step: 5
+            validate:
+                required: true
+                type: int
+                min: 1
+        contact_uuid:
+            type: select
+            label: Client
+            help: Client lie a ce rendez-vous.
+            data-options@: '\Grav\Plugin\CabinetPlugin::getClients'
+            validate:
+                required: true
+        contact_name:
+            type: text
+            label: Client Name
+        motif:
+            type: text
+            label: Motif
+        observations:
+            type: textarea
+            label: Observations
+        exercices:
+            type: text
+            label: Exercices
+        prochaine:
+            type: text
+            label: Prochaine séance

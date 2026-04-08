@@ -1,0 +1,69 @@
+{% extends 'partials/base.html.twig' %}
+
+{# ── Stylesheets ──────────────────────────────────────────────────────────── #}
+{% block stylesheets %}
+  {{ parent() }}
+  {% do assets.addCss('/cabinet/cabinet.css', {priority: 5}) %}
+{% endblock %}
+
+{# ── Scripts ─────────────────────────────────────────────────────────────── #}
+{% block javascripts %}
+  {{ parent() }}
+  {% do assets.addJs('https://apis.google.com/js/api.js', {group: 'head', loading: 'defer'}) %}
+  {% do assets.addJs('https://accounts.google.com/gsi/client', {group: 'head', loading: 'async'}) %}
+  {% do assets.addJs('/cabinet/cabinet.js', {group: 'bottom', priority: 5}) %}
+{% endblock %}
+
+{# ── Full-height app layout: header visible, no footer, no side padding ──── #}
+{% block body %}
+
+<section class="cab-section" style="padding-top:4rem">
+  <div class="cab-wrapper">
+
+    <div class="app" id="app">
+
+      <div class="sidebar">
+        <div class="sidebar-nav">
+          <div class="snav active" id="snav_clients" onclick="setSidebarView('clients')">Clients</div>
+          <div class="snav" id="snav_agenda" onclick="setSidebarView('agenda')">Agenda</div>
+        </div>
+        <div class="sidebar-head" id="sidebar_clients_head">
+          <span class="sidebar-title">Clients</span>
+          <button class="btn-add" onclick="openNewClient()">+ Nouveau</button>
+        </div>
+
+        <div id="sidebar_clients_body">
+          <div class="search-wrap">
+            <input type="text" placeholder="Rechercher..." id="searchInput" name="cabinet_search" oninput="renderList()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-1p-ignore="true" data-lpignore="true">
+          </div>
+          <div class="client-list" id="clientList"></div>
+        </div><!-- end sidebar_clients_body -->
+        <div id="sidebar_agenda_body" style="display:none;flex:1;overflow:hidden;flex-direction:column">
+          <div id="agendaContent" style="flex:1;overflow-y:auto"></div>
+        </div>
+        <div class="drive-bar">
+          <div class="drive-status" id="driveStatus">
+            <div class="drive-dot" id="driveDot"></div>
+            <span id="driveLabel">Bilans non synchronisés</span>
+            <button class="btn-drive" id="driveBtn" onclick="driveAuth()" title="Accéder aux documents cliniques Google">Connecter Docs</button>
+          </div>
+        </div>
+      </div>{# end .sidebar #}
+
+      <div class="main" id="mainArea">
+        <div class="empty-state">
+          <div style="width:40px;height:40px;border-radius:50%;background:var(--cab-surface);display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+          <span style="font-size:13px">Sélectionnez un client</span>
+          <span style="font-size:12px;color:var(--cab-text-sec)">ou créez un nouveau dossier</span>
+        </div>
+      </div>
+
+    </div>{# end .app #}
+
+  </div>{# end .cab-wrapper #}
+</section>
+
+<div id="modalOverlay" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalContent"></div>
+</div>
+{% endblock %}

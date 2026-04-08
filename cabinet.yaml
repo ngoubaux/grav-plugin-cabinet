@@ -1,0 +1,8 @@
+enabled: true
+
+# Clé secrète pour l'accès API externe (Make, scripts, etc.)
+# Changer impérativement avant déploiement
+api_key: 'CHANGE_ME_BEFORE_DEPLOY'
+
+# Origine CORS (* = toutes origines)
+allowed_origin: '*'

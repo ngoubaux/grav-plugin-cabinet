@@ -1,0 +1,21 @@
+{% extends 'flex-objects/types/default/list/list.html.twig' %}
+
+{% block entries %}
+tet
+    {# Build client lookup map in Twig, inject into the store #}
+    {% set clientMap = {} %}
+    {% set clientsDir = grav['flex'].directory('clients') %}
+    {% if clientsDir %}
+        {% for uuid, client in clientsDir.collection %}
+            {% set name = (client.first_name|trim) ~ ' ' ~ (client.last_name|trim) %}
+            {% set clientMap = clientMap|merge({(uuid): name|trim ?: client.email|default(uuid)}) %}
+        {% endfor %}
+    {% endif %}
+
+    {{ parent() }}
+
+    {# Vuetable named slot for contact_uuid column #}
+    <template slot="contact_uuid" slot-scope="props">
+        <span>{{ '{{ ' }}{{ clientMap }}[props.rowData.contact_uuid] || props.rowData.contact_uuid{{ ' }}' }}</span>
+    </template>
+{% endblock %}

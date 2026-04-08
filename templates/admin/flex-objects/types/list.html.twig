@@ -1,0 +1,23 @@
+{% extends 'flex-objects/types/default/list.html.twig' %}
+
+{% block item_cell %}
+  {# Override contact_uuid display to show client name instead #}
+  {% if field_name == 'contact_uuid' %}
+    {% set client_uuid = item.contact_uuid %}
+    {% set client = grav['flex'].directory('clients').getObject(client_uuid) %}
+    {% set client_name = client_uuid %}
+    {% if client %}
+      {% set first = (attribute(client, 'first_name')|default(''))|trim %}
+      {% set last = (attribute(client, 'last_name')|default(''))|trim %}
+      {% set full = (first ~ ' ' ~ last)|trim %}
+      {% if full != '' %}
+        {% set client_name = full %}
+      {% else %}
+        {% set client_name = attribute(client, 'email')|default(client_uuid) %}
+      {% endif %}
+    {% endif %}
+    <span class="cell-value">{{ client_name }}</span>
+  {% else %}
+    {{ parent() }}
+  {% endif %}
+{% endblock %}

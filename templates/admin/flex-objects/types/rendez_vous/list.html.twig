@@ -1,0 +1,23 @@
+{% extends "flex/default/list.html.twig" %}
+
+{% block item_cell %}
+ddd
+  {# Override contact_uuid display to show client name instead #}
+  {% if field_name == 'contact_uuid' %}
+    {% set client_uuid = item.contact_uuid %}
+    {% set clients = grav['flex'].directory('clients').collection %}
+    {% set client_name = client_uuid %}
+    {% for uuid, client in clients %}
+      {% if uuid == client_uuid %}
+        {% set client_name = (client.first_name|trim) ~ ' ' ~ (client.last_name|trim) %}
+        {% if client_name|trim == '' %}
+          {% set client_name = client.email|default(client_uuid) %}
+        {% endif %}
+        {% break %}
+      {% endif %}
+    {% endfor %}
+    <span class="cell-value">{{ client_name }}</span>
+  {% else %}
+    {{ parent() }}
+  {% endif %}
+{% endblock %}

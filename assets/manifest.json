@@ -1,0 +1,19 @@
+{
+  "name": "Cabinet — Nicolas Goubaux",
+  "short_name": "Cabinet",
+  "description": "Suivi client, séances et bilan énergétique",
+  "start_url": "/cabinet",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#ffffff",
+  "theme_color": "#C8102E",
+  "icons": [
+    {
+      "src": "/user/assets/typhoon/Logo_mediateur_7.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "productivity"]
+}

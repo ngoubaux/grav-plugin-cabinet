@@ -1,0 +1,53 @@
+name: Cabinet
+version: 2.0.0
+description: Cabinet de suivi client — données centralisées sur Grav, accessible sur tous vos appareils
+icon: plug
+author:
+  name: Nicolas Goubaux
+  email: contact@goubs.net
+homepage: https://www.goubs.net
+license: MIT
+
+dependencies:
+  - { name: grav, version: '>=1.7.0' }
+  - { name: login }
+  - { name: flex-objects }
+
+form:
+  validation: strict
+  fields:
+    enabled:
+      type: toggle
+      label: Statut du plugin
+      highlight: 1
+      default: 0
+      options:
+        1: Activé
+        0: Désactivé
+      validate:
+        type: bool
+
+    debug:
+      type: toggle
+      label: Mode debug
+      highlight: 1
+      default: 0
+      options:
+        1: Activé
+        0: Désactivé
+      validate:
+        type: bool
+
+    api_key:
+      type: text
+      label: Clé API externe
+      help: Utilisée par Make.com ou scripts tiers. Les appareils connectés via login Grav n'en ont pas besoin.
+      placeholder: votre-cle-tres-longue-et-aleatoire
+      validate:
+        required: true
+
+    allowed_origin:
+      type: text
+      label: Origine CORS
+      help: "* pour tout autoriser, ou une URL précise"
+      default: '*'
