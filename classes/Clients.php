@@ -19,9 +19,10 @@ class Clients
         $email = trim((string) ($_GET['email'] ?? ''));
         $firstName = trim((string) ($_GET['first_name'] ?? ''));
         $lastName = trim((string) ($_GET['last_name'] ?? ''));
+        $phone = trim((string) ($_GET['phone'] ?? ''));
 
-        if (empty($email) && (empty($firstName) || empty($lastName))) {
-            $this->core->jsonExit(['error' => 'email or first_name+last_name required'], 400);
+        if (empty($email) && empty($phone) && (empty($firstName) || empty($lastName))) {
+            $this->core->jsonExit(['error' => 'email, phone, or first_name+last_name required'], 400);
         }
 
         $grav = Grav::instance();
@@ -44,10 +45,18 @@ class Clients
                 }
             }
 
+            if (!empty($phone)) {
+                $stored = preg_replace('/\s+/', '', (string) ($data['phone1'] ?? ''));
+                $needle = preg_replace('/\s+/', '', $phone);
+                if ($stored !== '' && $stored === $needle) {
+                    $this->core->jsonExit($this->formatContact((string) $uuid, $data));
+                }
+            }
+
             if (!empty($firstName) && !empty($lastName)) {
                 if (
-                    strtolower((string) ($data['first_name'] ?? '')) === strtolower($firstName)
-                    && strtolower((string) ($data['last_name'] ?? '')) === strtolower($lastName)
+                    $this->normalizeForSearch((string) ($data['first_name'] ?? '')) === $this->normalizeForSearch($firstName)
+                    && $this->normalizeForSearch((string) ($data['last_name'] ?? '')) === $this->normalizeForSearch($lastName)
                 ) {
                     $this->core->jsonExit($this->formatContact((string) $uuid, $data));
                 }
@@ -55,6 +64,16 @@ class Clients
         }
 
         $this->core->jsonExit(['found' => false, 'uuid' => null]);
+    }
+
+    private function normalizeForSearch(string $value): string
+    {
+        // Decompose accented characters then strip combining marks (NFD → ASCII-range)
+        if (class_exists('Normalizer')) {
+            $value = \Normalizer::normalize($value, \Normalizer::FORM_D);
+        }
+        $value = preg_replace('/[\x{0300}-\x{036f}]/u', '', $value);
+        return strtolower($value);
     }
 
     private function formatContact(string $uuid, array $data): array

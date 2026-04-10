@@ -332,6 +332,124 @@ function showToast(message, type='info'){
   }, 2600);
 }
 
+function capitalize(text){
+  const value = String(text || '');
+  if(!value) return '';
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
+function toMinuteCount(v){
+  const n = parseInt(String(v || ''), 10);
+  return Number.isFinite(n) && n > 0 ? n : 75;
+}
+
+function formatDurationForSms(minutes){
+  const total = toMinuteCount(minutes);
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if(h && m) return `${h}h${String(m).padStart(2,'0')}`;
+  if(h) return `${h}h`;
+  return `${m} min`;
+}
+
+function parseSessionDateTime(session){
+  if(!session) return null;
+  const iso = session.datetime || (session.date ? `${session.date}T${session.heure || '00:00'}` : '');
+  if(!iso) return null;
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getPreferredSession(clientId){
+  const list = Array.isArray(sessions[clientId]) ? sessions[clientId].slice() : [];
+  if(!list.length) return null;
+
+  list.sort((a,b)=>{
+    const ad = parseSessionDateTime(a);
+    const bd = parseSessionDateTime(b);
+    const at = ad ? ad.getTime() : 0;
+    const bt = bd ? bd.getTime() : 0;
+    return at - bt;
+  });
+
+  const now = Date.now();
+  const upcoming = list.find(s=>{
+    const dt = parseSessionDateTime(s);
+    return dt && dt.getTime() >= now;
+  });
+  return upcoming || list[0] || null;
+}
+
+function formatSessionSlotForSms(session){
+  const dt = parseSessionDateTime(session);
+  if(!dt) return '';
+  const dayLabel = dt.toLocaleDateString('fr-FR', {weekday:'long', day:'2-digit', month:'long'});
+  const timeLabel = String(session.heure || dt.toTimeString().slice(0,5) || '').slice(0,5);
+  return `${capitalize(dayLabel)} à ${timeLabel}`;
+}
+
+function getPreparationVisitLink(client, clientId){
+  const rawId = client && client.grav_uuid ? client.grav_uuid : clientId;
+  const cleanId = compactUuid(rawId);
+  return cleanId ? `https://www.goubs.net/preparons-votre-visite/id:${cleanId}` : 'https://www.goubs.net/preparons-votre-visite/';
+}
+
+function buildPreparationSms(clientId){
+  const client = clients[clientId] || null;
+  const name = client ? `${String(client.first_name || '').trim()} ${String(client.last_name || '').trim()}`.trim() : '';
+  const greeting = name ? `Bonjour ${name},` : 'Bonjour,';
+  const session = client ? getPreferredSession(clientId) : null;
+  const sessionLabel = formatSessionSlotForSms(session);
+  const durationLabel = session ? formatDurationForSms(session.duree) : '1h15';
+  const link = getPreparationVisitLink(client, clientId);
+
+  return `${greeting}
+
+Afin de préparer notre première séance${sessionLabel ? ` de ${sessionLabel}` : ''}.
+Je vous partage ce lien: ${link}
+
+📍 60 chemin du Val Fleuri 🔐 Code portillon : 2507A 🏢 Bât B6 appt 08, 3ème étage, porte de gauche (à droite de la piscine)
+⏱️ Durée : ${durationLabel} - Tarif : 75€ 👕 Tenue : vêtements souples, chaussettes propres
+
+À bientôt, Nicolas
+Le shiatsu est une approche d'accompagnement au bien-être qui ne se substitue pas à un traitement médical.`;
+}
+
+function updatePreparationSms(){
+  const area = document.getElementById('smsPreparationMessage');
+  if(!area) return;
+  area.value = buildPreparationSms(activeId || '');
+}
+
+async function copyPreparationSms(){
+  const area = document.getElementById('smsPreparationMessage');
+  if(!area){
+    showToast('Template SMS introuvable','error');
+    return;
+  }
+
+  const text = area.value || '';
+  if(!text.trim()){
+    showToast('Message vide','error');
+    return;
+  }
+
+  try{
+    if(navigator.clipboard && window.isSecureContext){
+      await navigator.clipboard.writeText(text);
+    } else {
+      area.focus();
+      area.select();
+      document.execCommand('copy');
+      area.setSelectionRange(0, 0);
+      area.blur();
+    }
+    showToast('Message SMS copié');
+  }catch(_){
+    showToast('Copie impossible', 'error');
+  }
+}
+
 
 // ── Google Docs cliniques ────────────────────────────────────────────────────
 
@@ -570,11 +688,11 @@ function renderList(){
   }).join('');
 }
 
-function selectClient(id){activeId=id;activeTab='fiche';renderList();renderMain();}
+function selectClient(id){activeId=id;activeTab='fiche';renderList();renderMain();updatePreparationSms();}
 
 function renderMain(){
   const el=document.getElementById('mainArea');
-  if(!activeId){el.innerHTML='<div class="empty-state"><div style="font-size:13px">Sélectionnez un client</div></div>';return;}
+  if(!activeId){el.innerHTML='<div class="empty-state"><div style="font-size:13px">Sélectionnez un client</div></div>';updatePreparationSms();return;}
   const ss=sessions[activeId]||[];
   el.innerHTML=`
     <div class="main-tabs">
@@ -584,6 +702,7 @@ function renderMain(){
     </div>
     <div class="main-body" id="mainBody"></div>`;
   renderTab();
+  updatePreparationSms();
 }
 
 function setTab(t){
@@ -651,6 +770,14 @@ function renderFiche(){
             La recherche utilise l'email du client en priorité, puis le nom et prénom.<br>
             Configurez l'URL et la clé API via ⚙ si ce n'est pas encore fait.
           </div>`}
+
+        <div class="sms-template" id="smsTemplateSection" style="margin-top:12px">
+          <div class="sms-template-head">
+            <span>SMS préparation visite</span>
+            <button class="btn-ghost sms-copy-btn" id="smsCopyBtn" onclick="copyPreparationSms()">Copier</button>
+          </div>
+          <textarea id="smsPreparationMessage" readonly></textarea>
+        </div>
       </div>
     </div>`;
 }
@@ -999,6 +1126,7 @@ async function load(){
     const fromRendezVous = sessionsFromRendezVous(data.rendez_vous || []);
     sessions = fromRendezVous;
     renderList();
+    updatePreparationSms();
     if(sidebarView==='agenda') renderAgenda();
   }catch(e){
     console.error('Erreur chargement données',e);

@@ -72,12 +72,12 @@ class Api
 
         // ── Clients CRUD ─────────────────────────────────────────────────────
         if ($path === '/api/cabinet/clients' && $method === 'POST') {
-            $this->core->requireGravSession();
+            $this->core->requireSessionOrApiKey();
             $this->seances->createClientRecord();
         }
 
         if (preg_match('#^/api/cabinet/clients/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
-            $this->core->requireGravSession();
+            $this->core->requireSessionOrApiKey();
             $id = rawurldecode($m[1]);
             if ($method === 'PUT') $this->seances->updateClientRecord($id);
             if ($method === 'DELETE') $this->seances->deleteClientRecord($id);
@@ -85,19 +85,19 @@ class Api
 
         // ── Rendez-vous CRUD ─────────────────────────────────────────────────
         if ($path === '/api/cabinet/rendezvous' && $method === 'POST') {
-            $this->core->requireGravSession();
+            $this->core->requireSessionOrApiKey();
             $this->seances->createRendezvousRecord();
         }
 
         if (preg_match('#^/api/cabinet/rendezvous/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
-            $this->core->requireGravSession();
+            $this->core->requireSessionOrApiKey();
             $id = rawurldecode($m[1]);
             if ($method === 'PUT') $this->seances->updateRendezvousRecord($id);
             if ($method === 'DELETE') $this->seances->deleteRendezvousRecord($id);
         }
 
         if ($path === '/api/cabinet/rendezvous' && $method === 'GET') {
-            $this->core->requireGravSession();
+            $this->core->requireSessionOrApiKey();
             $this->core->jsonExit($this->seances->buildRendezVousPayload());
         }
 

@@ -198,6 +198,7 @@ form:
         contact_name:
             type: text
             label: Client Name
+            disabled: true
         motif:
             type: text
             label: Motif

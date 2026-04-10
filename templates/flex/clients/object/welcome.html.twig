@@ -1,0 +1,115 @@
+<div class="email-container">
+        <div class="header">
+            <h1>Bienvenue chez Nicolas Goubaux</h1>
+            <p>Médiateur de bien-être intérieur</p>
+        </div>
+        {% set object_id =  object.getKey() %}
+        {% set directory = grav.get('flex').directory('rendez_vous') %}
+        {% set rendez_vous_collection = directory.collection() %}
+        {% set rendez_vous = rendez_vous_collection.filterBy({'contact_uuid': object_id}).first() %}
+        {% set first_visit_date = rendez_vous ? rendez_vous.appointment_date : "now"|date('U') %}
+        {% set first_visit_time = rendez_vous ? rendez_vous.appointment_hour : "now"|date('H:i') %}
+
+
+            {% set rendez_vous_type = 'shiatsu sur futon' %}
+            {% if rendez_vous.appointment_type == "seance_échange" %}
+                {% set rendez_vous_type = "séance d'échange" %}
+            {% elseif rendez_vous.appointment_type == "shiatsu_futon" %}
+                {% set rendez_vous_type = "shiatsu sur futon" %}
+            {% elseif rendez_vous.appointment_type == "shiatsu_chair" %}
+                {% set rendez_vous_type = "shiatsu sur chaise" %}
+            {% endif %}
+
+        <div class="content">
+            <p class="greeting">Bonjour {{ object.first_name|e }},</p>
+
+            {% if first_visit_date|date('U') < "now"|date('U') %}
+                <p><em><strong>Note :</strong> Votre première séance a déjà eu lieu. <br>N'hésitez pas à me contacter si vous avez des questions ou souhaitez planifier une nouvelle séance.</em></p>
+            {% else %}
+            <p>Je suis ravi de vous accueillir pour votre première séance de {{ rendez_vous_type }} le <strong>{{ 'GRAV.DAYS_OF_THE_WEEK'|ta(first_visit_date|date('N') - 1)|e }} {{ first_visit_date|date("d") }} {{ 'GRAV.MONTHS_OF_THE_YEAR'|ta(first_visit_date|date('n') - 1)|e }}</strong> à <strong>{{ first_visit_time }}</strong>.</p>
+            {% endif %}
+            <h2><span class="icon-text">📍</span>Informations pratiques pour votre venue</h2>
+
+            <div class="info-box">
+                <h3>Adresse</h3>
+                <p><strong>60 Chemin du Val Fleuri</strong><br>
+                Bât. B6 Appt. 08 - 3ème étage, porte de gauche<br>
+                06800 Cagnes-sur-Mer</p>
+            </div>
+
+            <h3><span class="icon-text">🔐</span>Accès</h3>
+            <p>En arrivant au 60 chemin du Val Fleuri, vous trouverez un portillon dont le code est : <span class="code-access">2507A</span></p>
+            <p>Le bâtiment B6 se situe <strong>à droite de la piscine</strong>, au milieu du jardin d'enfants.<br>
+            Je suis au <strong>3ème étage, porte de gauche</strong>.</p>
+
+            <h3><span class="icon-text">🚌</span>Transports en commun</h3>
+            <p><span class="transport-icon">Bus 41</span> Arrêt Solidarités<br>
+            <span class="transport-icon">Bus 620/9</span> Arrêt Val Fleuri</p>
+
+            <h2><span class="icon-text">✨</span>Votre première séance</h2>
+            {{ rendez_vous.duration_minutes }}
+
+            <div class="price-highlight">
+                {# If the object has the tag "Echange", show a specific message, otherwise show the standard first-session details. #}
+                {% if object.tags is defined and 'Echange' in object.tags %}
+                    <strong>Note :</strong> Vous avez choisi une séance d'échange. Nous pourrons discuter ensemble de vos besoins et attentes lors de notre rencontre.
+                {% else %}
+                    Pour cette première rencontre, je vous propose une séance de <strong>1h15</strong> au tarif de <strong>75€</strong>.
+                {% endif %}
+            </div>
+
+            <p><strong>Cette séance comprend :</strong></p>
+            <ul>
+                <li>Un entretien initial pour comprendre votre situation, vos besoins et votre contexte de vie</li>
+                <li>Un travail sur l'ensemble du corps avec une attention particulière aux zones de tension</li>
+                <li>Des pressions et étirements doux adaptés à votre niveau de confort</li>
+                <li>Des conseils personnalisés pour prolonger les bienfaits de la séance</li>
+            </ul>
+
+            <div class="info-box">
+                <p><strong><span class="icon-text">👕</span>Tenue conseillée :</strong> Portez des vêtements souples et confortables (jogging, legging, t-shirt) et <strong>chaussettes propres</strong>. Les séances se pratiquent habillé(e).</p>
+            </div>
+
+            <h2><span class="icon-text">🔄</span>Les séances suivantes</h2>
+
+            <p>En fonction de vos besoins et de votre évolution, les séances suivantes pourront varier :</p>
+
+            <div class="tarif-item">
+                <strong>20 minutes</strong> – 30€ <em>(séance ciblée sur une zone précise)</em>
+            </div>
+            jusqu'à
+            <div class="tarif-item">
+                <strong>1 heure</strong> – 60€ <em>(séance complète)</em>
+            </div>
+
+            <p>Nous définirons ensemble la formule la plus adaptée à votre accompagnement.</p>
+
+            <h2><span class="icon-text">🌿</span>Mon approche</h2>
+
+            <p>En tant que <strong>Médiateur de bien-être intérieur</strong>, je vous propose un accompagnement complémentaire à la santé à travers le shiatsu. Cette technique manuelle japonaise utilise des pressions et des étirements pour accompagner le corps dans son processus naturel de régulation.</p>
+
+            <p>Elle peut vous aider à réduire le stress, soulager les tensions musculaires, améliorer la qualité du sommeil et retrouver un équilibre général.</p>
+
+            <p><em>Le shiatsu vient en complément des approches médicales traditionnelles et ne remplace pas un suivi médical.</em></p>
+
+            <div class="contact-info">
+                <p><strong><span class="icon-text">💬</span>Pour toute question</strong></p>
+                <p>N'hésitez pas à me contacter si vous avez la moindre question avant notre rendez-vous :</p>
+                <p>
+                    <span class="icon-text">📞</span> <a href="tel:0664313056">06 64 31 30 56</a><br>
+                    <span class="icon-text">🌐</span> <a href="https://www.goubs.net">www.goubs.net</a><br>
+                    <span class="icon-text">📅</span> <a href="https://www.resalib.fr/praticien/90790-nicolas-goubaux-praticien-shiatsu-cagnes-sur-mer">Resalib - Mon profil</a>
+                </p>
+            </div>
+
+            <div class="signature">
+                <p>Au plaisir de vous rencontrer,</p>
+                <strong>Nicolas Goubaux</strong>
+                <p style="font-size: 14px;">Praticien Shiatsu – Médiateur de bien-être intérieur</p>
+            </div>
+        </div>
+
+        <div class="footer">
+            Le shiatsu est une approche d'accompagnement au bien-être qui ne se substitue pas à un traitement médical.
+        </div>
+    </div>
