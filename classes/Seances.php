@@ -256,6 +256,12 @@ class Seances
         $record->exercices = (string) ($data['exercices'] ?? '');
         $record->prochaine = (string) ($data['prochaine'] ?? '');
         $record->bilan = is_array($data['bilan'] ?? null) ? $data['bilan'] : [];
+        if (array_key_exists('google_event_id', $data)) {
+            $record->google_event_id = (string) $data['google_event_id'];
+        }
+        if (array_key_exists('google_event_link', $data)) {
+            $record->google_event_link = (string) $data['google_event_link'];
+        }
     }
 
     private function loadData(): array
@@ -376,6 +382,8 @@ class Seances
                 'exercices' => (string) ($record['exercices'] ?? ''),
                 'prochaine' => (string) ($record['prochaine'] ?? ''),
                 'bilan' => is_array($record['bilan'] ?? null) ? $record['bilan'] : null,
+                'google_event_id'   => (string) ($record['google_event_id']   ?? ''),
+                'google_event_link' => (string) ($record['google_event_link'] ?? ''),
             ];
         }
 

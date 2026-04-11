@@ -101,6 +101,8 @@
 .pill-ex{display:inline-block;background:var(--cab-surface);border:1px solid var(--cab-border);border-radius:20px;padding:2px 8px;font-size:11px;color:var(--cab-text-sec);margin:2px}
 .delete-btn{background:none;border:none;color:var(--cab-text-dim);font-size:11px;cursor:pointer;padding:2px 6px;border-radius:4px;transition:color .12s}
 .delete-btn:hover{color:var(--cab-accent)}
+.gcal-link{font-size:10px;font-weight:600;color:var(--cab-text-dim);text-decoration:none;border:1px solid var(--cab-border);border-radius:4px;padding:1px 5px;letter-spacing:.03em;transition:color .12s,border-color .12s}
+.gcal-link:hover{color:var(--cab-accent);border-color:var(--cab-accent)}
 .no-sessions{text-align:center;padding:30px 0;color:var(--cab-text-sec);font-size:13px}
 .modal-overlay{position:fixed;inset:0;background:var(--cab-overlay-bg);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(2px)}
 .modal{background:var(--cab-bg);border-radius:12px;border:1px solid var(--cab-border);padding:22px;width:560px;max-width:92vw;max-height:88vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.18)}
