@@ -37,6 +37,8 @@ function sessionsFromRendezVous(items){
     mapped[clientId].push({
       id: String(item.id || item.session_id || uid()),
       flex_id: String(item.flex_id || ''),
+      google_event_id:   String(item.google_event_id   || ''),
+      google_event_link: String(item.google_event_link || ''),
       date,
       heure,
       datetime: datetime || (date ? `${date}T${heure}` : ''),
@@ -238,7 +240,7 @@ function initGapi(){
 function initTokenClient(clientId){
   window._tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents',
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
     callback: async (resp)=>{
       if(resp.error){ setDriveStatus('error','Erreur d\'authentification'); return; }
       driveToken = resp.access_token;
@@ -586,12 +588,13 @@ async function handleBilanDoc(clientId){
 }
 function openDriveSettings(){
   const cid=localStorage.getItem('gdrive_client_id')||'';
+  const calId=localStorage.getItem('gcal_calendar_id')||'';
   showModal(`
     <div class="modal-head">
-      <span class="modal-title">Configuration Google Drive</span>
+      <span class="modal-title">Configuration Google</span>
       <button class="btn-close" onclick="closeModal()">×</button>
     </div>
-    <div class="internal-badge">Le Client ID est stocké sur cet appareil uniquement</div>
+    <div class="internal-badge">Ces paramètres sont stockés sur cet appareil uniquement</div>
     <div class="field-grid">
       <div class="field field-full">
         <label>Google OAuth2 Client ID</label>
@@ -599,6 +602,13 @@ function openDriveSettings(){
         <span style="font-size:11px;color:#666;margin-top:4px">
           Google Cloud Console → APIs → Drive API → Identifiants → Client OAuth 2.0<br>
           Origine autorisée : <strong>https://goubs.net</strong>
+        </span>
+      </div>
+      <div class="field field-full">
+        <label>Identifiant du calendrier Google</label>
+        <input id="cfg_cal_id" value="${esc(calId)}" placeholder="xxxx@group.calendar.google.com">
+        <span style="font-size:11px;color:#666;margin-top:4px">
+          Paramètres du calendrier → « Adresse de l'agenda ». Laisser vide pour désactiver la sync.
         </span>
       </div>
     </div>
@@ -609,9 +619,70 @@ function saveDriveSettings(){
   const cid=document.getElementById('cfg_cid').value.trim();
   if(!cid){alert('Client ID requis');return;}
   localStorage.setItem('gdrive_client_id',cid);
+  const calId=document.getElementById('cfg_cal_id').value.trim();
+  if(calId) localStorage.setItem('gcal_calendar_id',calId);
+  else localStorage.removeItem('gcal_calendar_id');
   closeModal();
   if(gapiReady) initTokenClient(cid);
   driveAuth();
+}
+
+// ─── Google Calendar ─────────────────────────────────────────────────────────
+
+function _gcalEventBody(session){
+  const c=clients[activeId]||{};
+  const title=(c.first_name||'')+' '+(c.last_name||'');
+  const date=session.date;
+  const heure=session.heure||'09:00';
+  const duree=Math.max(1,parseInt(session.duree||'60',10)||60);
+  const startDt=`${date}T${heure}:00`;
+  const endDate=new Date(`${date}T${heure}:00`);
+  endDate.setMinutes(endDate.getMinutes()+duree);
+  const endDt=endDate.toISOString().slice(0,19);
+  const descParts=[];
+  if(session.motif)       descParts.push(session.motif);
+  if(session.observations)descParts.push('Observations : '+session.observations);
+  if(session.exercices)   descParts.push('Exercices : '+session.exercices);
+  if(session.prochaine)   descParts.push('Prochaine séance : '+session.prochaine);
+  return {
+    summary: title.trim(),
+    description: descParts.join('\n'),
+    start:{dateTime:startDt,timeZone:'Europe/Paris'},
+    end:  {dateTime:endDt,  timeZone:'Europe/Paris'},
+  };
+}
+
+async function gcalCreateEvent(session){
+  const calId=localStorage.getItem('gcal_calendar_id');
+  if(!calId||!driveToken) return null;
+  try{
+    const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+driveToken,'Content-Type':'application/json'},
+      body:JSON.stringify(_gcalEventBody(session)),
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const ev=await r.json();
+    return {id:ev.id, htmlLink:ev.htmlLink};
+  }catch(e){
+    showToast('Sync calendrier échouée : '+e.message,'error');
+    return null;
+  }
+}
+
+async function gcalUpdateEvent(eventId, session){
+  const calId=localStorage.getItem('gcal_calendar_id');
+  if(!calId||!driveToken||!eventId) return;
+  try{
+    const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${encodeURIComponent(eventId)}`,{
+      method:'PUT',
+      headers:{'Authorization':'Bearer '+driveToken,'Content-Type':'application/json'},
+      body:JSON.stringify(_gcalEventBody(session)),
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+  }catch(e){
+    showToast('Mise à jour calendrier échouée : '+e.message,'error');
+  }
 }
 
 // ─── Intégration Grav ────────────────────────────────────────────────────────
@@ -711,6 +782,7 @@ function setTab(t){
     tab.classList.toggle('active', tab.dataset.tab===t);
   });
   renderTab();
+  if(t==='fiche') updatePreparationSms();
 }
 
 function renderTab(){
@@ -817,7 +889,11 @@ function renderSeances(){
             <div class="session-motif">${esc(s.motif||'—')}</div>
             <div class="client-meta">${esc(s.status||'scheduled')} · ${esc(s.appointment_type||'shiatsu_futon')}</div>
           </div>
-          <button class="delete-btn" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+          <div style="display:flex;align-items:center;gap:8px">
+            ${s.google_event_link?`<a class="gcal-link" href="${s.google_event_link}" target="_blank" rel="noopener" onclick="event.stopPropagation()" title="Ouvrir dans Google Calendar">Cal</a>`:''}
+            <button class="btn-ghost" style="font-size:12px;padding:4px 8px" onclick="event.stopPropagation();openEditSession('${s.id}')">✎</button>
+            <button class="delete-btn" onclick="event.stopPropagation();deleteSession('${s.id}')">✕</button>
+          </div>
         </div>
         <div class="session-card-body${openSessions[s.id]?' open':''}" id="sb_${s.id}">
           <div class="session-body-tabs">
@@ -905,11 +981,16 @@ function renderBilanEvolution(){
     </div>`}`;
 }
 
-function openNewSession(){
+function _sessionModalHtml(s){
+  const b=s?.bilan||{};
   const today=new Date().toISOString().slice(0,10);
-  showModal(`
+  const isEdit=!!s;
+  const statusOpts=[['scheduled','Planifié'],['confirmed','Confirmé'],['completed','Terminé'],['cancelled','Annulé']];
+  const typeOpts=[['shiatsu_futon','Shiatsu futon'],['shiatsu_chair','Shiatsu chair'],['sophrologie','Sophrologie']];
+  const elementOpts=['','Bois','Feu','Terre','Métal','Eau'];
+  return `
     <div class="modal-head">
-      <span class="modal-title">Nouvelle séance</span>
+      <span class="modal-title">${isEdit?'Modifier la séance':'Nouvelle séance'}</span>
       <button class="btn-close" onclick="closeModal()">×</button>
     </div>
 
@@ -920,28 +1001,19 @@ function openNewSession(){
 
     <div id="modal_clinique">
       <div class="field-grid">
-        <div class="field"><label>Date</label><input id="s_date" type="date" value="${today}"></div>
-        <div class="field"><label>Heure</label><input id="s_heure" type="time" value="09:00"></div>
-        <div class="field"><label>Durée (min)</label><input id="s_duree" type="number" value="60" min="1" step="5" placeholder="60"></div>
+        <div class="field"><label>Date</label><input id="s_date" type="date" value="${s?.date||today}"></div>
+        <div class="field"><label>Heure</label><input id="s_heure" type="time" value="${s?.heure||'09:00'}"></div>
+        <div class="field"><label>Durée (min)</label><input id="s_duree" type="number" value="${s?.duree||'60'}" min="1" step="5" placeholder="60"></div>
         <div class="field"><label>Statut</label>
-          <select id="s_status">
-            <option value="scheduled">Planifié</option>
-            <option value="confirmed">Confirmé</option>
-            <option value="completed">Terminé</option>
-            <option value="cancelled">Annulé</option>
-          </select>
+          <select id="s_status">${statusOpts.map(([v,l])=>`<option value="${v}"${(s?.status||'scheduled')===v?' selected':''}>${l}</option>`).join('')}</select>
         </div>
         <div class="field"><label>Type</label>
-          <select id="s_appointment_type">
-            <option value="shiatsu_futon">Shiatsu futon</option>
-            <option value="shiatsu_chair">Shiatsu chair</option>
-            <option value="sophrologie">Sophrologie</option>
-          </select>
+          <select id="s_appointment_type">${typeOpts.map(([v,l])=>`<option value="${v}"${(s?.appointment_type||'shiatsu_futon')===v?' selected':''}>${l}</option>`).join('')}</select>
         </div>
-        <div class="field field-full"><label>Motif de la séance</label><input id="s_motif" placeholder="ex: douleur lombaire, stress..."></div>
-        <div class="field field-full"><label>Observations cliniques</label><textarea id="s_obs" placeholder="Zones travaillées, réactions, état général..."></textarea></div>
-        <div class="field field-full"><label>Exercices transmis (séparés par virgule)</label><input id="s_ex" placeholder="ex: étirement mollet, auto-massage balle"></div>
-        <div class="field field-full"><label>Intention pour la prochaine séance</label><input id="s_prochaine"></div>
+        <div class="field field-full"><label>Motif de la séance</label><input id="s_motif" value="${esc(s?.motif||'')}" placeholder="ex: douleur lombaire, stress..."></div>
+        <div class="field field-full"><label>Observations cliniques</label><textarea id="s_obs" placeholder="Zones travaillées, réactions, état général...">${esc(s?.observations||'')}</textarea></div>
+        <div class="field field-full"><label>Exercices transmis (séparés par virgule)</label><input id="s_ex" value="${esc(s?.exercices||'')}" placeholder="ex: étirement mollet, auto-massage balle"></div>
+        <div class="field field-full"><label>Intention pour la prochaine séance</label><input id="s_prochaine" value="${esc(s?.prochaine||'')}"></div>
       </div>
     </div>
 
@@ -953,24 +1025,81 @@ function openNewSession(){
           <div class="mer-item">
             <div class="mer-name">${m.name}</div>
             <select class="mer-select" id="mer_${m.id}">
-              ${STATES.map(st=>`<option value="${st.val}">${st.label}</option>`).join('')}
+              ${STATES.map(st=>`<option value="${st.val}"${b[m.id]===st.val?' selected':''}>${st.label}</option>`).join('')}
             </select>
           </div>`).join('')}
       </div>
       <div class="field-grid">
         <div class="field"><label>Élément dominant</label>
-          <select id="s_element">
-            <option value="">—</option>
-            <option>Bois</option><option>Feu</option><option>Terre</option><option>Métal</option><option>Eau</option>
-          </select>
+          <select id="s_element">${elementOpts.map(v=>`<option value="${v}"${(b.element_dominant||'')===v?' selected':''}>${v||'—'}</option>`).join('')}</select>
         </div>
-        <div class="field"><label>Évolution vs séance précédente</label><input id="s_evolution" placeholder="Amélioration, stagnation..."></div>
-        <div class="field field-full"><label>Synthèse MTC</label><textarea id="s_synthese_mtc" placeholder="Lecture énergétique globale, déséquilibres principaux..."></textarea></div>
-        <div class="field field-full"><label>Points / zones travaillés</label><textarea id="s_prise_en_charge" placeholder="Points utilisés, techniques appliquées..."></textarea></div>
+        <div class="field"><label>Évolution vs séance précédente</label><input id="s_evolution" value="${esc(b.evolution||'')}" placeholder="Amélioration, stagnation..."></div>
+        <div class="field field-full"><label>Synthèse MTC</label><textarea id="s_synthese_mtc" placeholder="Lecture énergétique globale, déséquilibres principaux...">${esc(b.synthese_mtc||'')}</textarea></div>
+        <div class="field field-full"><label>Points / zones travaillés</label><textarea id="s_prise_en_charge" placeholder="Points utilisés, techniques appliquées...">${esc(b.prise_en_charge||'')}</textarea></div>
       </div>
     </div>
 
-    <button class="btn-save" onclick="saveSession()">Enregistrer la séance</button>`);
+    <button class="btn-save" onclick="${isEdit?`updateSession('${s.id}')`:'saveSession()'}">${isEdit?'Mettre à jour':'Enregistrer la séance'}</button>`;
+}
+
+function openNewSession(){
+  showModal(_sessionModalHtml(null));
+}
+
+function openEditSession(sid){
+  const s=(sessions[activeId]||[]).find(x=>x.id===sid);
+  if(!s)return;
+  showModal(_sessionModalHtml(s));
+}
+
+async function updateSession(sid){
+  const list=sessions[activeId]||[];
+  const idx=list.findIndex(x=>x.id===sid);
+  if(idx===-1)return;
+  const s=list[idx];
+  if(!s.flex_id){showToast('Séance sans flex_id — impossible de modifier','error');return;}
+
+  const bilan={};
+  MERIDIANS.forEach(m=>{const v=document.getElementById('mer_'+m.id)?.value;if(v)bilan[m.id]=v;});
+  const el=document.getElementById('s_element')?.value;if(el)bilan.element_dominant=el;
+  const ev=document.getElementById('s_evolution')?.value;if(ev)bilan.evolution=ev;
+  const sy=document.getElementById('s_synthese_mtc')?.value;if(sy)bilan.synthese_mtc=sy;
+  const pc=document.getElementById('s_prise_en_charge')?.value;if(pc)bilan.prise_en_charge=pc;
+  const date=document.getElementById('s_date')?.value||'';
+  const heure=document.getElementById('s_heure')?.value||'00:00';
+
+  const updated={
+    ...s,
+    date,heure,
+    datetime:date?`${date}T${heure}`:'',
+    duree:String(Math.max(1,parseInt(document.getElementById('s_duree')?.value||'60',10)||60)),
+    status:document.getElementById('s_status')?.value||s.status,
+    appointment_type:document.getElementById('s_appointment_type')?.value||s.appointment_type,
+    motif:document.getElementById('s_motif')?.value||'',
+    observations:document.getElementById('s_obs')?.value||'',
+    exercices:document.getElementById('s_ex')?.value||'',
+    prochaine:document.getElementById('s_prochaine')?.value||'',
+    bilan:Object.keys(bilan).length?bilan:null,
+  };
+  if(!updated.date){showToast('La date est requise','error');return;}
+
+  const ok=await api('PUT','/api/cabinet/rendezvous/'+encodeURIComponent(s.flex_id),updated);
+  if(!ok){showToast('Modification échouée','error');return;}
+
+  if(updated.google_event_id){
+    await gcalUpdateEvent(updated.google_event_id, updated);
+  }else{
+    const gcalResult=await gcalCreateEvent(updated);
+    if(gcalResult){
+      updated.google_event_id=gcalResult.id;
+      updated.google_event_link=gcalResult.htmlLink;
+      await api('PUT','/api/cabinet/rendezvous/'+encodeURIComponent(s.flex_id),updated);
+    }
+  }
+
+  list[idx]=updated;
+  closeModal();
+  renderMain();
 }
 
 function switchModalTab(tab){
@@ -1015,6 +1144,12 @@ async function saveSession(){
   }
 
   sessionData.flex_id=result.flex_id||'';
+  const gcalResult=await gcalCreateEvent(sessionData);
+  if(gcalResult){
+    sessionData.google_event_id=gcalResult.id;
+    sessionData.google_event_link=gcalResult.htmlLink;
+    await api('PUT','/api/cabinet/rendezvous/'+encodeURIComponent(sessionData.flex_id),sessionData);
+  }
   sessions[activeId].push(sessionData);
   closeModal();
   renderList();

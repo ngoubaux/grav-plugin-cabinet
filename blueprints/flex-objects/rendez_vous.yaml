@@ -211,3 +211,10 @@ form:
         prochaine:
             type: text
             label: Prochaine séance
+        google_event_id:
+            type: hidden
+            label: Google Calendar Event ID
+        google_event_link:
+            type: url
+            label: Lien Google Calendar
+            disabled: true
