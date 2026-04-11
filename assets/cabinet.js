@@ -136,6 +136,7 @@ function renderAgenda(){
     if(!byDate[d]) byDate[d]=[];
     byDate[d].push(s);
   });
+  Object.values(byDate).forEach(list=>list.sort((a,b)=>(a.heure||'').localeCompare(b.heure||'')));
 
   // ── Mini calendrier ───────────────────────────────────────────────────
   const today = new Date().toISOString().slice(0,10);
@@ -186,6 +187,7 @@ function renderAgenda(){
         <div class="agenda-date-header">${label}</div>
         ${byDate[dateStr].map(s=>`
           <div class="agenda-entry${isPast?' past':''}" onclick="goToClient('${s.cid}')">
+            <div class="agenda-time">${s.heure?esc(s.heure.slice(0,5)):''}</div>
             <div>
               <div class="agenda-client">${esc(s.clientName)}</div>
               ${s.motif?`<div class="agenda-motif">${esc(s.motif)}</div>`:''}
@@ -226,6 +228,9 @@ function goToClient(cid){
 
 let driveToken = null;
 let gapiReady = false;
+let bilanFolderIdCache = null;
+let bilanFileCache = {};
+let _tokenRefreshTimer = null;
 
 function initGapi(){
   gapi.load('client', async ()=>{
@@ -233,39 +238,59 @@ function initGapi(){
     await gapi.client.load('https://www.googleapis.com/discovery/v1/apis/drive/v3/rest');
     gapiReady = true;
     const cid = localStorage.getItem('gdrive_client_id');
-    if(cid) initTokenClient(cid);
+    if(cid) initTokenClient(cid, true);
   });
 }
 
-function initTokenClient(clientId){
+function initTokenClient(clientId, silent=false){
   window._tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
-    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
+    scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
     callback: async (resp)=>{
-      if(resp.error){ setDriveStatus('error','Erreur d\'authentification'); return; }
+      if(resp.error){
+        if(!silent) setDriveStatus('error','Erreur d\'authentification');
+        return;
+      }
       driveToken = resp.access_token;
-      setDriveStatus('ok','Google Docs connecté');
-      document.getElementById('driveBtn').textContent='Déconnecter Docs';
+      bilanFolderIdCache = null;
+      bilanFileCache = {};
+      // Renouvellement automatique 5 min avant expiry
+      const expiresIn = Math.max(60, (resp.expires_in || 3600) - 300);
+      clearTimeout(_tokenRefreshTimer);
+      _tokenRefreshTimer = setTimeout(()=>{
+        window._tokenClient.requestAccessToken({prompt:''});
+      }, expiresIn * 1000);
+      setDriveStatus('ok','Google connecté');
+      document.getElementById('driveBtn').textContent='Déconnecter Drive';
       document.getElementById('driveBtn').onclick=driveSignOut;
+      const vb=document.getElementById('verifBtn');if(vb)vb.style.display='';
       renderList();
+      if(activeTab==='bilan') renderBilan();
+    },
+    error_callback: ()=>{
+      if(!silent) setDriveStatus('error','Erreur d\'authentification');
     }
   });
+  if(silent) window._tokenClient.requestAccessToken({prompt:''});
 }
 
 function driveAuth(){
   const cid = localStorage.getItem('gdrive_client_id');
   if(!cid){ openDriveSettings(); return; }
-  if(!window._tokenClient) initTokenClient(cid);
+  if(!window._tokenClient) initTokenClient(cid, false);
   setDriveStatus('loading','Connexion…');
   window._tokenClient.requestAccessToken({prompt:''});
 }
 
 function driveSignOut(){
+  clearTimeout(_tokenRefreshTimer);
   if(driveToken) google.accounts.oauth2.revoke(driveToken);
   driveToken=null; driveFileId=null;
+  bilanFolderIdCache=null; bilanFileCache={};
   setDriveStatus('','Non connecté');
   document.getElementById('driveBtn').textContent='Connecter Drive';
   document.getElementById('driveBtn').onclick=driveAuth;
+  const vb=document.getElementById('verifBtn');if(vb)vb.style.display='none';
   clients={}; sessions={}; renderList();
 }
 
@@ -282,6 +307,200 @@ async function driveGet(path, params=''){
   });
   if(r.status===401){setDriveStatus('error','Session expirée — reconnectez');return null;}
   return r.ok ? r.json() : null;
+}
+
+// ── Bilans PDF tablette Boox ──────────────────────────────────────────────────
+// Convention : onyx/NoteAir5c/Cahiers/clients/Prénom Nom.pdf
+
+async function _driveFolderChild(parentId, name){
+  const q = `name='${name.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
+  const r = await fetch(
+    'https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id)',
+    {headers:{'Authorization':'Bearer '+driveToken}}
+  );
+  if(!r.ok) return null;
+  const d = await r.json();
+  return (d.files && d.files.length) ? d.files[0].id : null;
+}
+
+async function _getBilanFolderId(){
+  if(bilanFolderIdCache) return bilanFolderIdCache;
+  let id = 'root';
+  for(const part of ['onyx','NoteAir5c','Cahiers','clients']){
+    id = await _driveFolderChild(id, part);
+    if(!id) return null;
+  }
+  bilanFolderIdCache = id;
+  return id;
+}
+
+async function uploadBilanTemplate(clientId){
+  const c=clients[clientId];
+  if(!c||!driveToken) return;
+  const name=((c.first_name||'')+' '+(c.last_name||'')).trim()+'.pdf';
+
+  const folderId=await _getBilanFolderId();
+  if(!folderId){ showToast('Dossier Drive introuvable','error'); return; }
+
+  let pdfBlob;
+  try{
+    const r=await fetch('/cabinet/bilan-template.pdf');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    pdfBlob=await r.blob();
+  }catch(e){ showToast('Erreur chargement template : '+e.message,'error'); return; }
+
+  try{
+    const metadata=JSON.stringify({name, parents:[folderId]});
+    const form=new FormData();
+    form.append('metadata', new Blob([metadata],{type:'application/json'}));
+    form.append('file', pdfBlob, name);
+    const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name',{
+      method:'POST',
+      headers:{'Authorization':'Bearer '+driveToken},
+      body:form,
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    delete bilanFileCache[clientId];
+    showToast('Fiche envoyée sur Drive : '+name);
+    if(activeTab==='bilan') renderBilan();
+  }catch(e){ showToast('Erreur upload Drive : '+e.message,'error'); }
+}
+
+async function runGlobalVerification(){
+  if(!driveToken){ showToast('Connectez Google Drive d\'abord','error'); return; }
+
+  showModal(`
+    <div class="modal-head">
+      <span class="modal-title">Vérification globale</span>
+      <button class="btn-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="verif-log" class="verif-log"></div>
+    <div id="verif-footer" class="verif-footer">En cours…</div>`);
+
+  const log=(msg,type='')=>{
+    const el=document.getElementById('verif-log');if(!el)return;
+    el.innerHTML+=`<div class="verif-entry${type?' verif-'+type:''}">${msg}</div>`;
+    el.scrollTop=el.scrollHeight;
+  };
+
+  const stats={bilanOk:0,bilanSent:0,bilanErr:0,calCreated:0,calErr:0};
+  const clientIds=Object.keys(clients);
+
+  // ── 1. Bilans ─────────────────────────────────────────────────────────────
+  log('<strong>Bilans tablette</strong>');
+  const folderId=await _getBilanFolderId();
+  if(!folderId){
+    log('⚠ Dossier Drive introuvable (onyx/NoteAir5c/Cahiers/clients)','warn');
+  } else {
+    let templateBlob=null;
+    try{ const r=await fetch('/cabinet/bilan-template.pdf'); if(r.ok) templateBlob=await r.blob(); }catch(_){}
+
+    for(const clientId of clientIds){
+      const c=clients[clientId];
+      const name=((c.first_name||'')+' '+(c.last_name||'')).trim();
+      delete bilanFileCache[clientId];
+      const file=await findClientBilanFile(clientId);
+      if(file){
+        log(`✓ ${esc(name)}`,'ok');
+        stats.bilanOk++;
+      } else if(!templateBlob){
+        log(`✗ ${esc(name)} — template introuvable`,'warn');
+        stats.bilanErr++;
+      } else {
+        log(`↑ ${esc(name)} — envoi fiche vierge…`);
+        try{
+          const fileName=name+'.pdf';
+          const form=new FormData();
+          form.append('metadata',new Blob([JSON.stringify({name:fileName,parents:[folderId]})],{type:'application/json'}));
+          form.append('file',templateBlob,fileName);
+          const r=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
+            method:'POST',headers:{'Authorization':'Bearer '+driveToken},body:form,
+          });
+          if(!r.ok) throw new Error('HTTP '+r.status);
+          delete bilanFileCache[clientId];
+          log('&nbsp;&nbsp;✓ Envoyé','ok');
+          stats.bilanSent++;
+        }catch(e){
+          log('&nbsp;&nbsp;✗ Erreur : '+e.message,'warn');
+          stats.bilanErr++;
+        }
+      }
+    }
+  }
+
+  // ── 2. Agenda ─────────────────────────────────────────────────────────────
+  const calId=localStorage.getItem('gcal_calendar_id');
+  log('');
+  if(!calId){
+    log('<strong>Agenda</strong> — calendrier non configuré, ignoré');
+  } else {
+    log('<strong>Agenda</strong>');
+    const today=new Date().toISOString().slice(0,10);
+    let anyPending=false;
+    for(const clientId of clientIds){
+      const c=clients[clientId];
+      const name=((c.first_name||'')+' '+(c.last_name||'')).trim();
+      const pending=(sessions[clientId]||[]).filter(s=>s.date>=today&&!s.google_event_id&&s.status!=='cancelled');
+      for(const s of pending){
+        anyPending=true;
+        log(`↑ ${esc(name)} — ${s.date} ${s.heure}`);
+        try{
+          const r=await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,{
+            method:'POST',
+            headers:{'Authorization':'Bearer '+driveToken,'Content-Type':'application/json'},
+            body:JSON.stringify(_gcalEventBodyForClient(clientId,s)),
+          });
+          if(!r.ok) throw new Error('HTTP '+r.status);
+          const ev=await r.json();
+          s.google_event_id=ev.id;
+          s.google_event_link=ev.htmlLink;
+          if(s.flex_id) await api('PUT','/api/cabinet/rendezvous/'+encodeURIComponent(s.flex_id),s);
+          log('&nbsp;&nbsp;✓ Créé','ok');
+          stats.calCreated++;
+        }catch(e){
+          log('&nbsp;&nbsp;✗ Erreur : '+e.message,'warn');
+          stats.calErr++;
+        }
+      }
+    }
+    if(!anyPending) log('✓ Toutes les séances à venir sont synchronisées','ok');
+  }
+
+  // ── Résumé ────────────────────────────────────────────────────────────────
+  const footer=document.getElementById('verif-footer');
+  if(footer){
+    const hasErr=stats.bilanErr||stats.calErr;
+    footer.className='verif-footer '+(hasErr?'verif-footer-warn':'verif-footer-ok');
+    footer.innerHTML=
+      `Bilans : ${stats.bilanOk} OK · ${stats.bilanSent} envoyés · ${stats.bilanErr} erreur(s)`+
+      (calId?` &nbsp;·&nbsp; Agenda : ${stats.calCreated} créé(s) · ${stats.calErr} erreur(s)`:'');
+  }
+  if(activeTab==='bilan') renderBilan();
+}
+
+async function findClientBilanFile(clientId){
+  if(bilanFileCache[clientId] !== undefined) return bilanFileCache[clientId];
+  if(!driveToken){ bilanFileCache[clientId] = null; return null; }
+  const c = clients[clientId];
+  if(!c){ bilanFileCache[clientId] = null; return null; }
+  const folderId = await _getBilanFolderId();
+  if(!folderId){ bilanFileCache[clientId] = null; return null; }
+  const name = ((c.first_name||'')+' '+(c.last_name||'')).trim()+'.pdf';
+  const q = `name='${name.replace(/'/g,"\\'")}' and '${folderId}' in parents and trashed=false`;
+  try{
+    const r = await fetch(
+      'https://www.googleapis.com/drive/v3/files?q='+encodeURIComponent(q)+'&fields=files(id,name)',
+      {headers:{'Authorization':'Bearer '+driveToken}}
+    );
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const d = await r.json();
+    const file = d.files && d.files.length ? d.files[0] : null;
+    bilanFileCache[clientId] = file ? {fileId:file.id, name:file.name} : null;
+    return bilanFileCache[clientId];
+  }catch(e){
+    bilanFileCache[clientId] = null;
+    return null;
+  }
 }
 
 
@@ -512,7 +731,7 @@ Ressources / soutiens :
 
 `;
 
-const BILAN_TEMPLATE = (prenom, nom) => `BILAN ÉNERGÉTIQUE — ${prenom} ${nom}
+const BILAN_TEMPLATE = (prenom, nom) => `BILAN — ${prenom} ${nom}
 Nicolas Goubaux — Usage interne praticien
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Insérer les schémas via Insertion › Dessin ou via une image scannée.
@@ -583,7 +802,7 @@ async function handleAnamneseDoc(clientId){
 async function handleBilanDoc(clientId){
   const c=clients[clientId];
   if(c.gdoc_bilan_id){openGDoc(c.gdoc_bilan_id);return;}
-  const id=await createDoc('Bilan énergétique — '+c.first_name+' '+c.last_name, BILAN_TEMPLATE(c.first_name,c.last_name));
+  const id=await createDoc('Bilan — '+c.first_name+' '+c.last_name, BILAN_TEMPLATE(c.first_name,c.last_name));
   if(id){clients[clientId].gdoc_bilan_id=id;await api('PUT','/api/cabinet/clients/'+encodeURIComponent(clientId),clients[clientId]);renderMain();}
 }
 function openDriveSettings(){
@@ -628,6 +847,29 @@ function saveDriveSettings(){
 }
 
 // ─── Google Calendar ─────────────────────────────────────────────────────────
+
+function _gcalEventBodyForClient(clientId, session){
+  const c=clients[clientId]||{};
+  const title=((c.first_name||'')+' '+(c.last_name||'')).trim();
+  const date=session.date;
+  const heure=session.heure||'09:00';
+  const duree=Math.max(1,parseInt(session.duree||'60',10)||60);
+  const startDt=`${date}T${heure}:00`;
+  const endDate=new Date(`${date}T${heure}:00`);
+  endDate.setMinutes(endDate.getMinutes()+duree);
+  const endDt=endDate.toISOString().slice(0,19);
+  const descParts=[];
+  if(session.motif)       descParts.push(session.motif);
+  if(session.observations)descParts.push('Observations : '+session.observations);
+  if(session.exercices)   descParts.push('Exercices : '+session.exercices);
+  if(session.prochaine)   descParts.push('Prochaine séance : '+session.prochaine);
+  return {
+    summary:title,
+    description:descParts.join('\n'),
+    start:{dateTime:startDt,timeZone:'Europe/Paris'},
+    end:  {dateTime:endDt,  timeZone:'Europe/Paris'},
+  };
+}
 
 function _gcalEventBody(session){
   const c=clients[activeId]||{};
@@ -759,7 +1001,7 @@ function renderList(){
   }).join('');
 }
 
-function selectClient(id){activeId=id;activeTab='fiche';renderList();renderMain();updatePreparationSms();}
+function selectClient(id){activeId=id;activeTab='fiche';delete bilanFileCache[id];renderList();renderMain();updatePreparationSms();}
 
 function renderMain(){
   const el=document.getElementById('mainArea');
@@ -769,7 +1011,7 @@ function renderMain(){
     <div class="main-tabs">
       <div class="tab${activeTab==='fiche'?' active':''}" data-tab="fiche" onclick="setTab('fiche')">Fiche client</div>
       <div class="tab${activeTab==='seances'?' active':''}" data-tab="seances" onclick="setTab('seances')">Séances (${ss.length})</div>
-      <div class="tab${activeTab==='bilan'?' active':''}" data-tab="bilan" onclick="setTab('bilan')">Bilan énergétique</div>
+      <div class="tab${activeTab==='bilan'?' active':''}" data-tab="bilan" onclick="setTab('bilan')">Bilan</div>
     </div>
     <div class="main-body" id="mainBody"></div>`;
   renderTab();
@@ -789,7 +1031,7 @@ function renderTab(){
   const el=document.getElementById('mainBody');if(!el)return;
   if(activeTab==='fiche')el.innerHTML=renderFiche();
   else if(activeTab==='seances')el.innerHTML=renderSeances();
-  else el.innerHTML=renderBilanEvolution();
+  else renderBilan();
 }
 
 function renderFiche(){
@@ -898,7 +1140,7 @@ function renderSeances(){
         <div class="session-card-body${openSessions[s.id]?' open':''}" id="sb_${s.id}">
           <div class="session-body-tabs">
             <div class="stab${!openSessions[s.id+'_tab']||openSessions[s.id+'_tab']==='clinique'?' active':''}" onclick="setSessionTab('${s.id}','clinique')">Clinique</div>
-            <div class="stab${openSessions[s.id+'_tab']==='energetique'?' active':''}" onclick="setSessionTab('${s.id}','energetique')">Bilan énergétique</div>
+            <div class="stab${openSessions[s.id+'_tab']==='energetique'?' active':''}" onclick="setSessionTab('${s.id}','energetique')">Bilan</div>
           </div>
           <div id="stab_${s.id}">
             ${renderSessionClinique(s)}
@@ -953,14 +1195,57 @@ function toggleSession(id){
   if(el)el.classList.toggle('open',!!openSessions[id]);
 }
 
-function renderBilanEvolution(){
+async function renderBilan(){
+  const el=document.getElementById('mainBody');
+  if(!el) return;
+  // Affichage immédiat avec "Recherche…"
+  el.innerHTML=_renderBilanHtml(null,'loading');
+  const file=await findClientBilanFile(activeId);
+  // Vérifier que le tab est toujours actif
+  if(document.getElementById('mainBody')===el && activeTab==='bilan')
+    el.innerHTML=_renderBilanHtml(file,'ready');
+}
+
+function _renderBilanHtml(file, state){
+  const c=clients[activeId]||{};
+  const name=((c.first_name||'')+' '+(c.last_name||'')).trim();
+  const expectedFile=name+'.pdf';
+
+  let pdfSection;
+  if(!driveToken){
+    pdfSection=`<div class="bilan-pdf-notice">Connectez Google Drive pour afficher le bilan tablette.</div>`;
+  } else if(state==='loading'){
+    pdfSection=`<div class="bilan-pdf-notice">Recherche du bilan tablette…</div>`;
+  } else if(file){
+    pdfSection=`
+      <div class="bilan-pdf-section">
+        <div class="bilan-pdf-header">
+          <span class="section-label" style="margin:0">Bilan tablette</span>
+          <a href="https://drive.google.com/file/d/${file.fileId}/view" target="_blank" class="btn-ghost" style="font-size:11px;padding:4px 10px">Ouvrir dans Drive ↗</a>
+        </div>
+        <div class="bilan-pdf-viewer">
+          <iframe src="https://drive.google.com/file/d/${file.fileId}/preview" frameborder="0" allowfullscreen loading="lazy"></iframe>
+        </div>
+      </div>`;
+  } else {
+    pdfSection=driveToken
+      ?`<div class="bilan-pdf-notice bilan-pdf-missing">
+          Aucun bilan tablette pour <strong>${esc(name)}</strong>.<br>
+          <span style="font-size:11px">Fichier attendu : <code>${esc(expectedFile)}</code></span>
+          <div style="margin-top:10px">
+            <button class="btn-ghost" style="font-size:12px" onclick="uploadBilanTemplate('${activeId}')">Envoyer la fiche vierge sur Drive →</button>
+          </div>
+        </div>`
+      :`<div class="bilan-pdf-notice">Connectez Google Drive pour afficher le bilan tablette.</div>`;
+  }
+
   const ss=(sessions[activeId]||[]).filter(s=>s.bilan&&Object.keys(s.bilan).length>0).sort((a,b)=>a.date.localeCompare(b.date));
-  return `
-    <div class="evolution-header">
+  return pdfSection+`
+    <div class="evolution-header" style="margin-top:20px">
       <div class="section-label" style="margin:0">Évolution énergétique</div>
       <div class="internal-badge" style="margin:0">Usage interne uniquement</div>
     </div>
-    ${!ss.length?`<div class="no-sessions">Aucun bilan énergétique enregistré.<br><span style="font-size:12px">Ajoutez un bilan dans l'onglet Séances → sous-onglet "Bilan énergétique".</span></div>`:`
+    ${!ss.length?`<div class="no-sessions">Aucun bilan enregistré.<br><span style="font-size:12px">Ajoutez un bilan dans l'onglet Séances → sous-onglet "Bilan".</span></div>`:`
     <div class="mer-legend">
       ${Object.entries(STATE_CLASS).filter(([k])=>k).map(([k,cls])=>`<span class="energie-chip ${cls}">${STATES.find(s=>s.val===k)?.label||k}</span>`).join('')}
     </div>
@@ -996,7 +1281,7 @@ function _sessionModalHtml(s){
 
     <div style="display:flex;gap:0;margin-bottom:18px;border:0.5px solid var(--color-border-tertiary,#e2e2e2);border-radius:8px;overflow:hidden">
       <div id="mtab_clinique" class="stab active" onclick="switchModalTab('clinique')" style="flex:1;text-align:center">Clinique</div>
-      <div id="mtab_energetique" class="stab" onclick="switchModalTab('energetique')" style="flex:1;text-align:center">Bilan énergétique</div>
+      <div id="mtab_energetique" class="stab" onclick="switchModalTab('energetique')" style="flex:1;text-align:center">Bilan</div>
     </div>
 
     <div id="modal_clinique">

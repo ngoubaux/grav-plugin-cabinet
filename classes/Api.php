@@ -62,6 +62,21 @@ class Api
             $this->serveAsset('sw.js', 'application/javascript');
         }
 
+        if ($path === '/cabinet/bilan-template.pdf') {
+            $this->core->requireGravSession();
+            $file = dirname(__DIR__) . '/assets/Fiche Client - Shiatsu.pdf';
+            if (!file_exists($file)) {
+                http_response_code(404);
+                echo 'Not found';
+                exit;
+            }
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: inline; filename="Fiche-Client-Shiatsu.pdf"');
+            header('Content-Length: ' . filesize($file));
+            readfile($file);
+            exit;
+        }
+
         if ($path === '/api/cabinet/data') {
             $this->core->requireGravSession();
             if ($method === 'GET') {
