@@ -38,11 +38,27 @@ class CabinetPlugin extends Plugin
     public static function getSubscribedEvents(): array
     {
         return [
-            'onTwigTemplateAdminPaths' => ['onTwigTemplatePaths', 0],
-            'onPluginsInitialized'  => ['onPluginsInitialized', 0],
-            'onTwigTemplatePaths'   => ['onTwigTemplatePaths', 0],
-            FlexRegisterEvent::class => ['onRegisterFlex', 0],
+            'onTwigTemplateAdminPaths'  => ['onTwigTemplatePaths', 0],
+            'onPluginsInitialized'      => ['onPluginsInitialized', 0],
+            'onTwigTemplatePaths'       => ['onTwigTemplatePaths', 0],
+            'onGetPageBlueprints'       => ['onGetPageBlueprints', 0],
+            'onGetPageTemplates'        => ['onGetPageTemplates', 0],
+            FlexRegisterEvent::class    => ['onRegisterFlex', 0],
         ];
+    }
+
+    public function onGetPageBlueprints(Event $event): void
+    {
+        /** @var \Grav\Common\Page\Types $types */
+        $types = $event->types;
+        $types->scanBlueprints('plugins://cabinet/blueprints');
+    }
+
+    public function onGetPageTemplates(Event $event): void
+    {
+        /** @var \Grav\Common\Page\Types $types */
+        $types = $event->types;
+        $types->scanTemplates('plugins://cabinet/templates');
     }
 
     public function onRegisterFlex(FlexRegisterEvent $event): void

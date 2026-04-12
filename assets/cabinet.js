@@ -242,7 +242,65 @@ function initGapi(){
   });
 }
 
+function _saveToken(token, expiresIn){
+  const expiry = Date.now() + expiresIn * 1000;
+  sessionStorage.setItem('gdrive_token', token);
+  sessionStorage.setItem('gdrive_token_expiry', String(expiry));
+}
+
+function _clearSavedToken(){
+  sessionStorage.removeItem('gdrive_token');
+  sessionStorage.removeItem('gdrive_token_expiry');
+}
+
+function _loadSavedToken(){
+  const token = sessionStorage.getItem('gdrive_token');
+  const expiry = parseInt(sessionStorage.getItem('gdrive_token_expiry') || '0', 10);
+  // Valide si encore 5 min de marge
+  if(token && expiry - Date.now() > 5 * 60 * 1000) return {token, expiresIn: Math.floor((expiry - Date.now()) / 1000)};
+  return null;
+}
+
+function _applyToken(token, expiresIn){
+  driveToken = token;
+  bilanFolderIdCache = null;
+  bilanFileCache = {};
+  _saveToken(token, expiresIn);
+  const expiresInClamped = Math.max(60, expiresIn - 300);
+  clearTimeout(_tokenRefreshTimer);
+  _tokenRefreshTimer = setTimeout(()=>{
+    window._tokenClient.requestAccessToken({prompt:''});
+  }, expiresInClamped * 1000);
+  setDriveStatus('ok','Google connecté');
+  document.getElementById('driveBtn').textContent='Déconnecter Drive';
+  document.getElementById('driveBtn').onclick=driveSignOut;
+  const vb=document.getElementById('verifBtn');if(vb)vb.style.display='';
+  renderList();
+  if(activeTab==='bilan') renderBilan();
+}
+
 function initTokenClient(clientId, silent=false){
+  // Tenter de restaurer un token sauvegardé avant tout appel réseau
+  if(silent){
+    const saved = _loadSavedToken();
+    if(saved){
+      window._tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
+        callback: ()=>{},
+        error_callback: ()=>{}
+      });
+      _applyToken(saved.token, saved.expiresIn);
+      // Planifier un refresh silencieux avant expiry
+      const refreshIn = Math.max(60, saved.expiresIn - 300);
+      clearTimeout(_tokenRefreshTimer);
+      _tokenRefreshTimer = setTimeout(()=>{
+        window._tokenClient.requestAccessToken({prompt:''});
+      }, refreshIn * 1000);
+      return;
+    }
+  }
+
   window._tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
     scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
@@ -251,21 +309,7 @@ function initTokenClient(clientId, silent=false){
         if(!silent) setDriveStatus('error','Erreur d\'authentification');
         return;
       }
-      driveToken = resp.access_token;
-      bilanFolderIdCache = null;
-      bilanFileCache = {};
-      // Renouvellement automatique 5 min avant expiry
-      const expiresIn = Math.max(60, (resp.expires_in || 3600) - 300);
-      clearTimeout(_tokenRefreshTimer);
-      _tokenRefreshTimer = setTimeout(()=>{
-        window._tokenClient.requestAccessToken({prompt:''});
-      }, expiresIn * 1000);
-      setDriveStatus('ok','Google connecté');
-      document.getElementById('driveBtn').textContent='Déconnecter Drive';
-      document.getElementById('driveBtn').onclick=driveSignOut;
-      const vb=document.getElementById('verifBtn');if(vb)vb.style.display='';
-      renderList();
-      if(activeTab==='bilan') renderBilan();
+      _applyToken(resp.access_token, resp.expires_in || 3600);
     },
     error_callback: ()=>{
       if(!silent) setDriveStatus('error','Erreur d\'authentification');
@@ -285,6 +329,7 @@ function driveAuth(){
 function driveSignOut(){
   clearTimeout(_tokenRefreshTimer);
   if(driveToken) google.accounts.oauth2.revoke(driveToken);
+  _clearSavedToken();
   driveToken=null; driveFileId=null;
   bilanFolderIdCache=null; bilanFileCache={};
   setDriveStatus('','Non connecté');
@@ -432,7 +477,7 @@ async function runGlobalVerification(){
   const calId=localStorage.getItem('gcal_calendar_id');
   log('');
   if(!calId){
-    log('<strong>Agenda</strong> — calendrier non configuré, ignoré');
+    log('<strong>Agenda</strong> — calendrier non configuré, ignoré &nbsp;<button class="btn-ghost" style="font-size:11px;padding:3px 8px" onclick="closeModal();openDriveSettings()">Configurer →</button>');
   } else {
     log('<strong>Agenda</strong>');
     const today=new Date().toISOString().slice(0,10);
@@ -1001,7 +1046,9 @@ function renderList(){
   }).join('');
 }
 
-function selectClient(id){activeId=id;activeTab='fiche';delete bilanFileCache[id];renderList();renderMain();updatePreparationSms();}
+function selectClient(id){activeId=id;activeTab='fiche';delete bilanFileCache[id];renderList();renderMain();updatePreparationSms();document.getElementById('app').classList.toggle('client-open',!!id);}
+
+function goBack(){activeId=null;document.getElementById('app').classList.remove('client-open');renderList();renderMain();}
 
 function renderMain(){
   const el=document.getElementById('mainArea');
@@ -1009,6 +1056,7 @@ function renderMain(){
   const ss=sessions[activeId]||[];
   el.innerHTML=`
     <div class="main-tabs">
+      <button class="btn-back" onclick="goBack()" title="Retour">&#8592;</button>
       <div class="tab${activeTab==='fiche'?' active':''}" data-tab="fiche" onclick="setTab('fiche')">Fiche client</div>
       <div class="tab${activeTab==='seances'?' active':''}" data-tab="seances" onclick="setTab('seances')">Séances (${ss.length})</div>
       <div class="tab${activeTab==='bilan'?' active':''}" data-tab="bilan" onclick="setTab('bilan')">Bilan</div>
@@ -1545,6 +1593,12 @@ async function load(){
     clients  = asPlainObject(data.clients);
     const fromRendezVous = sessionsFromRendezVous(data.rendez_vous || []);
     sessions = fromRendezVous;
+
+    // Appliquer la config serveur si renseignée (priorité sur localStorage)
+    const cfg = data.config || {};
+    if(cfg.google_oauth_client_id) localStorage.setItem('gdrive_client_id', cfg.google_oauth_client_id);
+    if(cfg.google_calendar_id)     localStorage.setItem('gcal_calendar_id', cfg.google_calendar_id);
+
     renderList();
     updatePreparationSms();
     if(sidebarView==='agenda') renderAgenda();

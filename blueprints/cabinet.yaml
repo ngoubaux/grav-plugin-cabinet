@@ -1,0 +1,24 @@
+title: Cabinet
+extends@: default
+form:
+  fields:
+    tabs:
+      fields:
+        content:
+          fields:
+            header.access:
+              type: section
+              title: Accès
+              underline: true
+
+            header.access.site.login:
+              type: toggle
+              toggleable: false
+              label: Connexion requise
+              highlight: 1
+              default: 1
+              options:
+                1: Oui
+                0: Non
+              validate:
+                type: bool

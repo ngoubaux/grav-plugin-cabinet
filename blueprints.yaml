@@ -51,3 +51,20 @@ form:
       label: Origine CORS
       help: "* pour tout autoriser, ou une URL précise"
       default: '*'
+
+    google:
+      type: section
+      title: Google
+      underline: true
+
+    google_oauth_client_id:
+      type: text
+      label: OAuth Client ID
+      help: "Google Cloud Console → APIs → Identifiants → Client OAuth 2.0"
+      placeholder: xxxx.apps.googleusercontent.com
+
+    google_calendar_id:
+      type: text
+      label: Identifiant du calendrier Google
+      help: "Paramètres du calendrier → Adresse de l'agenda. Laisser vide pour désactiver."
+      placeholder: xxxx@group.calendar.google.com
