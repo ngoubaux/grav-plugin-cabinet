@@ -6,3 +6,6 @@ api_key: 'CHANGE_ME_BEFORE_DEPLOY'
 
 # Origine CORS (* = toutes origines)
 allowed_origin: '*'
+
+google_oauth_client_id: ''
+google_calendar_id: ''

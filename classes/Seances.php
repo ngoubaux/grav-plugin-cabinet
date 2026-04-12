@@ -34,12 +34,17 @@ class Seances
         $rendezVous = $this->collectFromDirectory($records, $data['clients']);
         $facturation = $this->facturation->summarize($data['sessions']);
 
+        $config = Grav::instance()['config'];
         return [
             'clients' => $data['clients'],
             'sessions' => $data['sessions'],
             'rendez_vous' => $rendezVous,
             'rendez_vous_by_day' => $this->indexByDay($rendezVous),
             'facturation' => $facturation,
+            'config' => [
+                'google_oauth_client_id' => (string) $config->get('plugins.cabinet.google_oauth_client_id', ''),
+                'google_calendar_id'     => (string) $config->get('plugins.cabinet.google_calendar_id', ''),
+            ],
         ];
     }
 

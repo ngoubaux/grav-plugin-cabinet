@@ -17,7 +17,7 @@
 {# ── Full-height app layout: header visible, no footer, no side padding ──── #}
 {% block body %}
 
-<section class="cab-section" style="padding-top:4rem">
+<section class="cab-section cab-section--app">
   <div class="cab-wrapper">
 
     <div class="app" id="app">
@@ -45,7 +45,9 @@
           <div class="drive-status" id="driveStatus">
             <div class="drive-dot" id="driveDot"></div>
             <span id="driveLabel">Bilans non synchronisés</span>
-            <button class="btn-drive" id="driveBtn" onclick="driveAuth()" title="Accéder aux documents cliniques Google">Connecter Docs</button>
+            <button class="btn-drive" id="driveBtn" onclick="driveAuth()" title="Accéder aux documents cliniques Google">Connecter Drive</button>
+            <button class="btn-verif" id="verifBtn" onclick="runGlobalVerification()" title="Vérifier bilans et agenda" style="display:none">Vérifier</button>
+            <button class="dark-toggle" id="darkToggle" onclick="toggleDark()" title="Basculer thème sombre">🌙</button>
           </div>
         </div>
       </div>{# end .sidebar #}

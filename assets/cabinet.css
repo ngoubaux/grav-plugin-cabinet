@@ -34,6 +34,7 @@
 
 /* ── Embedded layout (inside site header/footer) ── */
 .cab-section{flex:1;overflow:hidden;display:flex;flex-direction:column;background:var(--cab-surface)}
+.cab-section--app{padding-top:7.5rem}
 .cab-section>.cab-wrapper{flex:1;overflow:hidden;display:flex;align-items:flex-start;justify-content:center;padding:16px;background:var(--cab-surface)}
 .cab-section .app{height:100%;min-height:0}
 
@@ -203,3 +204,26 @@
 .grav-uuid-display{font-family:ui-monospace,monospace;font-size:11px;color:var(--cab-text-sec);background:var(--cab-bg);border:1px solid var(--cab-border);border-radius:4px;padding:3px 7px;margin-top:4px;display:inline-block}
 .settings-btn{background:none;border:1px solid var(--cab-border);border-radius:6px;padding:4px 8px;font-size:11px;color:var(--cab-text-sec);cursor:pointer;margin-left:auto;transition:background .12s}
 .settings-btn:hover{background:var(--cab-surface-alt)}
+
+/* ── Back button (mobile only) ── */
+.btn-back{display:none;background:none;border:none;color:var(--cab-text-sec);cursor:pointer;font-size:13px;padding:0 4px 0 0;line-height:1;margin-right:6px;flex-shrink:0}
+.btn-back:hover{color:var(--cab-text)}
+
+/* ── Responsive ── */
+@media (max-width:768px){
+  .cab-section>.cab-wrapper{padding:0;align-items:stretch}
+  .cab-section .app{height:auto;min-height:0}
+  .app{grid-template-columns:1fr;border-radius:0;border-left:none;border-right:none;min-height:calc(100dvh - 4rem)}
+  .sidebar{height:auto;flex:1}
+  .main{display:none}
+  .app.client-open .sidebar{display:none}
+  .app.client-open .main{display:flex}
+  .btn-back{display:inline-flex;align-items:center}
+  .main-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .field-grid{grid-template-columns:1fr}
+  .field-full{grid-column:1}
+  .stats-row{grid-template-columns:repeat(3,1fr)}
+  .meridian-grid{grid-template-columns:repeat(2,1fr)}
+  .modal{width:100%;max-width:100%;max-height:100dvh;border-radius:0;border:none;margin:0}
+  .modal-overlay{align-items:flex-end}
+}
