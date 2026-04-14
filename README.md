@@ -2,6 +2,8 @@
 
 Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), construit sur [Grav CMS](https://getgrav.org). Il centralise les dossiers clients, les rendez-vous, les bilans PDF et les rappels SMS dans une interface mobile-first accessible depuis n'importe quel appareil.
 
+![Vue desktop — fiche client](assets/screenshots/desktop-client-fiche.png)
+
 ---
 
 ## Sommaire
@@ -139,8 +141,13 @@ L'interface applicative est une SPA (Single Page Application) chargée dans cett
 
 ### Séances (onglet Séances)
 
+![Vue desktop — séances et bilan énergétique](assets/screenshots/desktop-seances-bilan.png)
+
 - Liste de toutes les séances du client, dans l'ordre chronologique inverse.
 - Bouton **Nouvelle séance** pour créer un rendez-vous.
+
+  ![Modal nouvelle séance](assets/screenshots/modal-new-session.png)
+
 - Chaque séance est éditable : date, heure, durée, type, statut, motif, observations, exercices, prochaine séance, bilan énergétique.
 - Option **Désactiver le rappel SMS J-1** par séance.
 - Synchronisation Google Calendar : crée/met à jour l'événement dans l'agenda configuré.
@@ -154,8 +161,18 @@ L'interface applicative est une SPA (Single Page Application) chargée dans cett
 
 ### Agenda (sidebar droite / vue agenda)
 
+![Vue desktop — agenda](assets/screenshots/desktop-agenda.png)
+
 - Rendez-vous regroupés par jour, triés par heure.
 - Synchronisation avec Google Calendar pour voir les événements en temps réel.
+
+### Vue mobile
+
+Sur écran étroit, l'interface passe en vue pleine largeur : la sidebar s'affiche en premier, puis la fiche client s'ouvre au tap avec un bouton retour.
+
+| Liste des clients | Fiche client |
+|---|---|
+| ![Mobile — liste clients](assets/screenshots/mobile-sidebar.png) | ![Mobile — fiche client](assets/screenshots/mobile-client.png) |
 
 ### Vérification globale
 
