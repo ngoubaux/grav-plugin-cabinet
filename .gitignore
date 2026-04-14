@@ -1,0 +1,8 @@
+# Clés OAuth Google (ne jamais versionner)
+client_secret_*.json
+
+# macOS
+.DS_Store
+
+# Cache et données locales
+*.cache

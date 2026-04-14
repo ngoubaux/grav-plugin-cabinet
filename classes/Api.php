@@ -18,16 +18,21 @@ class Api
     /** @var \Grav\Plugin\Cabinet\Facturation */
     private $facturation;
 
+    /** @var \Grav\Plugin\Cabinet\Sms */
+    private $sms;
+
     public function __construct(
         \Grav\Plugin\Cabinet\Core $core,
         \Grav\Plugin\Cabinet\Clients $clients,
         \Grav\Plugin\Cabinet\Seances $seances,
-        \Grav\Plugin\Cabinet\Facturation $facturation
+        \Grav\Plugin\Cabinet\Facturation $facturation,
+        \Grav\Plugin\Cabinet\Sms $sms
     ) {
         $this->core = $core;
         $this->clients = $clients;
         $this->seances = $seances;
         $this->facturation = $facturation;
+        $this->sms = $sms;
     }
 
     public function handleRequest(): void
@@ -124,6 +129,17 @@ class Api
         if ($path === '/api/contacts/search' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
             $this->clients->searchContact();
+        }
+
+        // ── SMS ──────────────────────────────────────────────────────────────────
+        if ($path === '/api/cabinet/sms/preparation' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->sms->handleSendPreparation();
+        }
+
+        if ($path === '/api/cabinet/sms/rappels' && $method === 'POST') {
+            $this->core->requireSessionOrApiKey();
+            $this->sms->handleSendRappels();
         }
 
         $this->core->jsonExit(['error' => 'Route not found'], 404);

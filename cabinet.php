@@ -10,12 +10,14 @@ use Grav\Plugin\Cabinet\Clients;
 use Grav\Plugin\Cabinet\Core;
 use Grav\Plugin\Cabinet\Facturation;
 use Grav\Plugin\Cabinet\Seances;
+use Grav\Plugin\Cabinet\Sms;
 
 require_once __DIR__ . '/classes/Core.php';
 require_once __DIR__ . '/classes/Api.php';
 require_once __DIR__ . '/classes/Clients.php';
 require_once __DIR__ . '/classes/Seances.php';
 require_once __DIR__ . '/classes/Facturation.php';
+require_once __DIR__ . '/classes/Sms.php';
 require_once __DIR__ . '/classes/Flex/RendezVousObject.php';
 
 class CabinetPlugin extends Plugin
@@ -35,6 +37,9 @@ class CabinetPlugin extends Plugin
     /** @var Facturation|null */
     private $facturation;
 
+    /** @var Sms|null */
+    private $sms;
+
     public static function getSubscribedEvents(): array
     {
         return [
@@ -43,6 +48,7 @@ class CabinetPlugin extends Plugin
             'onTwigTemplatePaths'       => ['onTwigTemplatePaths', 0],
             'onGetPageBlueprints'       => ['onGetPageBlueprints', 0],
             'onGetPageTemplates'        => ['onGetPageTemplates', 0],
+            'onSchedulerInitialized'    => ['onSchedulerInitialized', 0],
             FlexRegisterEvent::class    => ['onRegisterFlex', 0],
         ];
     }
@@ -157,6 +163,30 @@ class CabinetPlugin extends Plugin
         return $options;
     }
 
+    public function onSchedulerInitialized(Event $event): void
+    {
+        $enabled = $this->config->get('plugins.cabinet.sms_enabled', false);
+        if (!$enabled) {
+            return;
+        }
+        $cron = (string) $this->config->get('plugins.cabinet.sms_rappel_cron', '0 8 * * *');
+        $scheduler = $event['scheduler'];
+        $job = $scheduler->addFunction('Grav\Plugin\CabinetPlugin::runSmsRappels', [], 'cabinet-sms-rappels');
+        $job->at($cron);
+        $job->output('/logs/cabinet-sms-rappels');
+        $job->backlink('/plugins/cabinet');
+    }
+
+    public static function runSmsRappels(): void
+    {
+        require_once __DIR__ . '/classes/Core.php';
+        require_once __DIR__ . '/classes/Sms.php';
+        $core = new \Grav\Plugin\Cabinet\Core();
+        $sms  = new \Grav\Plugin\Cabinet\Sms($core);
+        $results = $sms->sendRappelsJ1();
+        $core->debugLog('SMS rappels J-1', $results);
+    }
+
     private function bootModules(): void
     {
         if ($this->core !== null) {
@@ -167,12 +197,14 @@ class CabinetPlugin extends Plugin
         $this->clients = new Clients($this->core);
         $this->facturation = new Facturation($this->core);
         $this->seances = new Seances($this->core, $this->facturation);
+        $this->sms = new Sms($this->core);
 
         $this->api = new Api(
             $this->core,
             $this->clients,
             $this->seances,
-            $this->facturation
+            $this->facturation,
+            $this->sms
         );
     }
 }

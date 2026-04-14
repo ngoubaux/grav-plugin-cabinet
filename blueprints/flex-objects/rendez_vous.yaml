@@ -218,3 +218,16 @@ form:
             type: url
             label: Lien Google Calendar
             disabled: true
+        sms_rappel_disabled:
+            type: toggle
+            label: Désactiver le rappel SMS J-1
+            highlight: 0
+            default: 0
+            options:
+                1: Désactivé
+                0: Activé
+            validate:
+                type: bool
+        sms_rappel_sent_date:
+            type: hidden
+            label: Date dernier rappel SMS
