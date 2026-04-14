@@ -44,6 +44,8 @@ class Seances
             'config' => [
                 'google_oauth_client_id' => (string) $config->get('plugins.cabinet.google_oauth_client_id', ''),
                 'google_calendar_id'     => (string) $config->get('plugins.cabinet.google_calendar_id', ''),
+                'drive_bilan_path'       => (string) $config->get('plugins.cabinet.drive_bilan_path', 'onyx/NoteAir5c/Cahiers/clients'),
+                'sms_enabled'            => (bool)   $config->get('plugins.cabinet.sms_enabled', false),
             ],
         ];
     }
@@ -267,6 +269,7 @@ class Seances
         if (array_key_exists('google_event_link', $data)) {
             $record->google_event_link = (string) $data['google_event_link'];
         }
+        $record->sms_rappel_disabled = !empty($data['sms_rappel_disabled']);
     }
 
     private function loadData(): array
@@ -387,8 +390,9 @@ class Seances
                 'exercices' => (string) ($record['exercices'] ?? ''),
                 'prochaine' => (string) ($record['prochaine'] ?? ''),
                 'bilan' => is_array($record['bilan'] ?? null) ? $record['bilan'] : null,
-                'google_event_id'   => (string) ($record['google_event_id']   ?? ''),
-                'google_event_link' => (string) ($record['google_event_link'] ?? ''),
+                'google_event_id'      => (string) ($record['google_event_id']      ?? ''),
+                'google_event_link'    => (string) ($record['google_event_link']    ?? ''),
+                'sms_rappel_disabled'  => !empty($record['sms_rappel_disabled']),
             ];
         }
 
@@ -533,7 +537,8 @@ class Seances
                 'observations' => (string) ($record['observations'] ?? ''),
                 'exercices' => (string) ($record['exercices'] ?? ''),
                 'prochaine' => (string) ($record['prochaine'] ?? ''),
-                'bilan' => is_array($bilan) ? $bilan : null,
+                'bilan'               => is_array($bilan) ? $bilan : null,
+                'sms_rappel_disabled'  => !empty($record['sms_rappel_disabled']),
             ];
         }
 

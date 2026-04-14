@@ -1,4 +1,6 @@
 let clients={},sessions={},activeId=null,activeTab='fiche',openSessions={};
+let smsEnabled=false;
+let driveBilanPath='onyx/NoteAir5c/Cahiers/clients';
 
 function normalizeUuid(value){
   return String(value || '').replace(/-/g, '').toLowerCase();
@@ -355,7 +357,7 @@ async function driveGet(path, params=''){
 }
 
 // ── Bilans PDF tablette Boox ──────────────────────────────────────────────────
-// Convention : onyx/NoteAir5c/Cahiers/clients/Prénom Nom.pdf
+// Convention : <driveBilanPath>/Prénom Nom.pdf  (chemin configurable dans l'admin)
 
 async function _driveFolderChild(parentId, name){
   const q = `name='${name.replace(/'/g,"\\'")}' and mimeType='application/vnd.google-apps.folder' and '${parentId}' in parents and trashed=false`;
@@ -371,7 +373,8 @@ async function _driveFolderChild(parentId, name){
 async function _getBilanFolderId(){
   if(bilanFolderIdCache) return bilanFolderIdCache;
   let id = 'root';
-  for(const part of ['onyx','NoteAir5c','Cahiers','clients']){
+  const parts = driveBilanPath.split('/').map(p => p.trim()).filter(p => p.length > 0);
+  for(const part of parts){
     id = await _driveFolderChild(id, part);
     if(!id) return null;
   }
@@ -435,7 +438,7 @@ async function runGlobalVerification(){
   log('<strong>Bilans tablette</strong>');
   const folderId=await _getBilanFolderId();
   if(!folderId){
-    log('⚠ Dossier Drive introuvable (onyx/NoteAir5c/Cahiers/clients)','warn');
+    log(`⚠ Dossier Drive introuvable (${driveBilanPath})`,'warn');
   } else {
     let templateBlob=null;
     try{ const r=await fetch('/cabinet/bilan-template.pdf'); if(r.ok) templateBlob=await r.blob(); }catch(_){}
@@ -685,6 +688,24 @@ function updatePreparationSms(){
   const area = document.getElementById('smsPreparationMessage');
   if(!area) return;
   area.value = buildPreparationSms(activeId || '');
+}
+
+async function sendPreparationSms(){
+  const c = clients[activeId];
+  if(!c){ showToast('Client introuvable','error'); return; }
+  const phone = c.phone||'';
+  if(!phone){ showToast('Numéro de téléphone manquant','error'); return; }
+  const message = document.getElementById('smsPreparationMessage')?.value||'';
+  if(!message.trim()){ showToast('Message vide','error'); return; }
+
+  const btn = document.getElementById('smsSendBtn');
+  if(btn){ btn.disabled=true; btn.textContent='Envoi…'; }
+
+  const resp = await api('POST','/api/cabinet/sms/preparation',{phone, message});
+
+  if(btn){ btn.disabled=false; btn.textContent='Envoyer SMS'; }
+  if(resp?.ok) showToast('SMS envoyé ✓');
+  else showToast('Erreur : '+(resp?.error||'inconnue'),'error');
 }
 
 async function copyPreparationSms(){
@@ -1136,7 +1157,10 @@ function renderFiche(){
         <div class="sms-template" id="smsTemplateSection" style="margin-top:12px">
           <div class="sms-template-head">
             <span>SMS préparation visite</span>
-            <button class="btn-ghost sms-copy-btn" id="smsCopyBtn" onclick="copyPreparationSms()">Copier</button>
+            <div style="display:flex;gap:6px">
+              <button class="btn-ghost sms-send-btn" id="smsSendBtn" onclick="sendPreparationSms()">Envoyer SMS</button>
+              <button class="btn-ghost sms-copy-btn" id="smsCopyBtn" onclick="copyPreparationSms()">Copier</button>
+            </div>
           </div>
           <textarea id="smsPreparationMessage" readonly></textarea>
         </div>
@@ -1347,6 +1371,12 @@ function _sessionModalHtml(s){
         <div class="field field-full"><label>Observations cliniques</label><textarea id="s_obs" placeholder="Zones travaillées, réactions, état général...">${esc(s?.observations||'')}</textarea></div>
         <div class="field field-full"><label>Exercices transmis (séparés par virgule)</label><input id="s_ex" value="${esc(s?.exercices||'')}" placeholder="ex: étirement mollet, auto-massage balle"></div>
         <div class="field field-full"><label>Intention pour la prochaine séance</label><input id="s_prochaine" value="${esc(s?.prochaine||'')}"></div>
+        ${smsEnabled?`<div class="field field-full" style="margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+            <input type="checkbox" id="s_sms_rappel_disabled" ${s?.sms_rappel_disabled?'checked':''}>
+            Désactiver le rappel SMS J-1 pour cette séance
+          </label>
+        </div>`:''}
       </div>
     </div>
 
@@ -1413,6 +1443,7 @@ async function updateSession(sid){
     exercices:document.getElementById('s_ex')?.value||'',
     prochaine:document.getElementById('s_prochaine')?.value||'',
     bilan:Object.keys(bilan).length?bilan:null,
+    sms_rappel_disabled:!!(document.getElementById('s_sms_rappel_disabled')?.checked),
   };
   if(!updated.date){showToast('La date est requise','error');return;}
 
@@ -1467,6 +1498,7 @@ async function saveSession(){
     exercices:document.getElementById('s_ex')?.value||'',
     prochaine:document.getElementById('s_prochaine')?.value||'',
     bilan:Object.keys(bilan).length?bilan:null,
+    sms_rappel_disabled:!!(document.getElementById('s_sms_rappel_disabled')?.checked),
   };
   if(!sessionData.date){showToast('La date est requise','error');return;}
 
@@ -1598,6 +1630,8 @@ async function load(){
     const cfg = data.config || {};
     if(cfg.google_oauth_client_id) localStorage.setItem('gdrive_client_id', cfg.google_oauth_client_id);
     if(cfg.google_calendar_id)     localStorage.setItem('gcal_calendar_id', cfg.google_calendar_id);
+    if(cfg.drive_bilan_path)       { driveBilanPath = cfg.drive_bilan_path; bilanFolderIdCache = null; }
+    smsEnabled = !!cfg.sms_enabled;
 
     renderList();
     updatePreparationSms();

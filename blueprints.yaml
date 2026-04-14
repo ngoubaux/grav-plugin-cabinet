@@ -1,11 +1,17 @@
 name: Cabinet
+slug: cabinet
+type: plugin
 version: 2.0.0
 description: Cabinet de suivi client — données centralisées sur Grav, accessible sur tous vos appareils
-icon: plug
+icon: briefcase
 author:
   name: Nicolas Goubaux
   email: contact@goubs.net
-homepage: https://www.goubs.net
+homepage: https://github.com/ngoubaux/grav-plugin-cabinet
+keywords: grav, plugin, cabinet, clients, rendez-vous, sms, agenda, flex-objects
+bugs: https://github.com/ngoubaux/grav-plugin-cabinet/issues
+docs: https://github.com/ngoubaux/grav-plugin-cabinet/blob/main/README.md
+repository: https://github.com/ngoubaux/grav-plugin-cabinet
 license: MIT
 
 dependencies:
@@ -68,3 +74,39 @@ form:
       label: Identifiant du calendrier Google
       help: "Paramètres du calendrier → Adresse de l'agenda. Laisser vide pour désactiver."
       placeholder: xxxx@group.calendar.google.com
+
+    drive_bilan_path:
+      type: text
+      label: Chemin des bilans sur Google Drive
+      help: "Chemin du dossier contenant les sous-dossiers clients sur Drive. Séparateur : /. Sans slash au début ni à la fin."
+      placeholder: onyx/NoteAir5c/Cahiers/clients
+      default: 'onyx/NoteAir5c/Cahiers/clients'
+
+    sms:
+      type: section
+      title: SMS (SMSMobileAPI)
+      underline: true
+
+    sms_enabled:
+      type: toggle
+      label: SMS activés
+      highlight: 1
+      default: 0
+      options:
+        1: Activé
+        0: Désactivé
+      validate:
+        type: bool
+
+    sms_api_key:
+      type: text
+      label: Clé API SMSMobileAPI
+      help: "Disponible sur app.smsmobileapi.com → Mon compte"
+      placeholder: votre-api-key
+
+    sms_rappel_cron:
+      type: text
+      label: Heure d'envoi des rappels J-1
+      help: "Expression cron — ex: '0 8 * * *' = tous les jours à 8h00"
+      default: '0 8 * * *'
+      placeholder: '0 8 * * *'

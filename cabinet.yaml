@@ -9,3 +9,8 @@ allowed_origin: '*'
 
 google_oauth_client_id: ''
 google_calendar_id: ''
+drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'
+
+sms_enabled: false
+sms_api_key: ''
+sms_rappel_cron: '0 8 * * *'
