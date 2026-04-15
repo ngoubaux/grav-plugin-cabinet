@@ -208,27 +208,52 @@ Scopes demandés :
 
 ### Structure des bilans sur Google Drive
 
-Le chemin est configurable dans l'administration du plugin (`drive_bilan_path`). Par défaut :
+Le paramètre `drive_bilan_path` doit correspondre au chemin exact du **dossier racine** de vos bilans sur Google Drive (séparateur `/`, sans slash en début ou fin). À adapter selon votre propre organisation Drive.
+
+```yaml
+# Exemples
+drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'   # tablette Boox NoteAir
+drive_bilan_path: 'Documents/Shiatsu/bilans'          # autre structure
+```
+
+À l'intérieur de ce dossier racine, chaque client doit avoir un sous-dossier dont le nom correspond à **Prénom NOM** (insensible à la casse) :
 
 ```
 Mon Drive/
-└── onyx/                          ← driveBilanPath = "onyx/NoteAir5c/Cahiers/clients"
-    └── NoteAir5c/
-        └── Cahiers/
-            └── clients/           ← dossier racine des bilans
-                ├── Anne DUPONT/   ← sous-dossier = "Prénom NOM"
-                │   └── bilan-2024-03.pdf
-                └── Jean MARTIN/
-                    └── bilan-energetique.pdf
+└── <drive_bilan_path>/            ← valeur du paramètre
+    ├── Anne DUPONT/               ← sous-dossier = "Prénom NOM" du client
+    │   └── bilan-2024-03.pdf
+    └── Jean MARTIN/
+        └── bilan-energetique.pdf
 ```
 
-Le nom du sous-dossier doit correspondre au **prénom + nom** du client (insensible à la casse).
+### Tablette Boox Note Air 5C — prise de notes sur les bilans
 
-Pour une structure différente (ex: NAS monté, autre tablette), modifier `drive_bilan_path` dans la configuration :
+Le flux recommandé pour annoter les bilans directement sur la tablette :
 
-```yaml
-drive_bilan_path: 'Documents/Shiatsu/bilans'
-```
+#### 1. Lier Google Drive à la bibliothèque Boox
+
+Sur la tablette :
+
+> Paramètres → Comptes → Accéder au stockage cloud dans la bibliothèque → Synchroniser avec Google Drive → Se connecter
+
+Une fois le compte Google lié, les fichiers Google Drive sont accessibles depuis l'application **Bibliothèque** de la tablette.
+
+#### 2. Télécharger et annoter le PDF
+
+1. Depuis l'onglet **Bilan** du plugin, cliquer sur **Envoyer la fiche vierge sur Drive** si aucun bilan n'existe encore pour ce client. Le PDF template est déposé dans `<drive_bilan_path>/Prénom NOM/`.
+2. Sur la tablette, ouvrir la **Bibliothèque → Google Drive** et naviguer jusqu'au dossier du client.
+3. Télécharger et ouvrir le PDF.
+4. Prendre les notes directement sur le PDF (stylet).
+5. En quittant le PDF, la tablette synchronise automatiquement le fichier annoté vers Google Drive.
+
+#### 3. Consulter le bilan depuis le plugin
+
+De retour dans l'interface Cabinet, l'onglet **Bilan** affiche le PDF annoté via une visionneuse intégrée (les annotations Boox sont intégrées au PDF, aucune conversion nécessaire).
+
+> **Note :** la synchronisation Boox → Drive se déclenche à la fermeture du document. Si le bilan n'apparaît pas immédiatement, patienter quelques secondes et rafraîchir l'onglet Bilan.
+
+---
 
 ### Google Calendar
 
