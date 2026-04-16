@@ -87,7 +87,7 @@ config:
   # Data Configuration
   data:
     # Object class to be used, allowing custom methods for the object
-    object: 'Grav\Common\Flex\Types\Generic\GenericObject'
+    object: 'Grav\Plugin\Cabinet\Flex\ClientObject'
     # Collection class to be used, allowing custom methods for the collections
     collection: 'Grav\Common\Flex\Types\Generic\GenericCollection'
     # Index class to be used, works as a quick database-like lookup index

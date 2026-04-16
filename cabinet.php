@@ -19,6 +19,7 @@ require_once __DIR__ . '/classes/Seances.php';
 require_once __DIR__ . '/classes/Facturation.php';
 require_once __DIR__ . '/classes/Sms.php';
 require_once __DIR__ . '/classes/Flex/RendezVousObject.php';
+require_once __DIR__ . '/classes/Flex/ClientObject.php';
 
 class CabinetPlugin extends Plugin
 {
