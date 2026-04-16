@@ -3,30 +3,28 @@
             <h1>Bienvenue chez Nicolas Goubaux</h1>
             <p>Médiateur de bien-être intérieur</p>
         </div>
-        {% set object_id =  object.getKey() %}
-        {% set directory = grav.get('flex').directory('rendez_vous') %}
-        {% set rendez_vous_collection = directory.collection() %}
-        {% set rendez_vous = rendez_vous_collection.filterBy({'contact_uuid': object_id}).first() %}
-        {% set first_visit_date = rendez_vous ? rendez_vous.appointment_date : "now"|date('U') %}
-        {% set first_visit_time = rendez_vous ? rendez_vous.appointment_hour : "now"|date('H:i') %}
+        {% set rendez_vous = object.nextAppointment %}
+        {% set next_visit_date = rendez_vous ? rendez_vous.appointment_date : null %}
+        {% set next_visit_time = rendez_vous ? rendez_vous.appointment_hour : null %}
 
-
-            {% set rendez_vous_type = 'shiatsu sur futon' %}
+        {% set rendez_vous_type = 'shiatsu sur futon' %}
+        {% if rendez_vous %}
             {% if rendez_vous.appointment_type == "seance_échange" %}
                 {% set rendez_vous_type = "séance d'échange" %}
-            {% elseif rendez_vous.appointment_type == "shiatsu_futon" %}
-                {% set rendez_vous_type = "shiatsu sur futon" %}
             {% elseif rendez_vous.appointment_type == "shiatsu_chair" %}
                 {% set rendez_vous_type = "shiatsu sur chaise" %}
             {% endif %}
+        {% endif %}
 
         <div class="content">
             <p class="greeting">Bonjour {{ object.first_name|e }},</p>
 
-            {% if first_visit_date|date('U') < "now"|date('U') %}
-                <p><em><strong>Note :</strong> Votre première séance a déjà eu lieu. <br>N'hésitez pas à me contacter si vous avez des questions ou souhaitez planifier une nouvelle séance.</em></p>
+            {% if rendez_vous %}
+            <p>Je suis ravi de vous accueillir pour votre prochaine séance de {{ rendez_vous_type }} le <strong>{{ 'GRAV.DAYS_OF_THE_WEEK'|ta(next_visit_date|date('N') - 1)|e }} {{ next_visit_date|date("d") }} {{ 'GRAV.MONTHS_OF_THE_YEAR'|ta(next_visit_date|date('n') - 1)|e }}</strong> à <strong>{{ next_visit_time }}</strong>.</p>
             {% else %}
-            <p>Je suis ravi de vous accueillir pour votre première séance de {{ rendez_vous_type }} le <strong>{{ 'GRAV.DAYS_OF_THE_WEEK'|ta(first_visit_date|date('N') - 1)|e }} {{ first_visit_date|date("d") }} {{ 'GRAV.MONTHS_OF_THE_YEAR'|ta(first_visit_date|date('n') - 1)|e }}</strong> à <strong>{{ first_visit_time }}</strong>.</p>
+            <p><em><strong>Note :</strong> Vous n'avez pas encore de prochain rendez-vous planifié.<br>
+            N'hésitez pas à en prendre un dès que vous le souhaitez :</em></p>
+            <p><a href="https://www.resalib.fr/praticien/90790-nicolas-goubaux-praticien-shiatsu-cagnes-sur-mer" style="display:inline-block;padding:10px 20px;background-color:#4a7c59;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;">📅 Prendre un rendez-vous</a></p>
             {% endif %}
             <h2><span class="icon-text">📍</span>Informations pratiques pour votre venue</h2>
 
