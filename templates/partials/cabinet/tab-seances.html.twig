@@ -1,0 +1,100 @@
+<div x-show="$store.cab.activeTab==='seances'" x-data="cabinetSeances">
+
+  <div class="sessions-head">
+    <div class="section-label" style="margin:0">Historique des séances</div>
+    <button class="btn-add" @click="$store.cab.openModal('session', null)">+ Séance</button>
+  </div>
+
+  <div x-show="$store.cab.activeSessions.length === 0" class="no-sessions">
+    Aucune séance enregistrée
+  </div>
+
+  <template x-for="s in $store.cab.activeSessions" :key="s.id">
+    <div class="session-card">
+
+      <div class="session-card-head" @click="toggleCard(s.id)">
+        <div>
+          <div class="session-date"
+               x-text="s.date + (s.heure ? ' · ' + s.heure : '') + (s.duree ? ' · ' + s.duree + ' min' : '')"></div>
+          <div class="session-motif" x-text="s.motif || '—'"></div>
+          <div class="client-meta"
+               x-text="(s.status || 'scheduled') + ' · ' + (s.appointment_type || 'shiatsu_futon')"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <a class="gcal-link" x-show="s.google_event_link"
+             :href="s.google_event_link" target="_blank" rel="noopener"
+             @click.stop title="Ouvrir dans Google Calendar">Cal</a>
+          <button class="btn-ghost" style="font-size:12px;padding:4px 8px"
+                  @click.stop="$store.cab.openModal('session', s)">&#9998;</button>
+          <button class="delete-btn"
+                  @click.stop="$store.cab.deleteSession(s.id)">&#10005;</button>
+        </div>
+      </div>
+
+      <div class="session-card-body" :class="{open: openCards[s.id]}">
+        <div class="session-body-tabs">
+          <div class="stab" :class="{active: getCardTab(s.id)==='clinique'}"
+               @click="setCardTab(s.id,'clinique')">Clinique</div>
+          <div class="stab" :class="{active: getCardTab(s.id)==='energetique'}"
+               @click="setCardTab(s.id,'energetique')">Bilan</div>
+        </div>
+
+        {# Clinique #}
+        <div x-show="getCardTab(s.id)==='clinique'">
+          <div x-show="s.observations">
+            <div class="obs-label">Observations</div>
+            <div class="obs-text" x-text="s.observations"></div>
+          </div>
+          <div x-show="s.exercices">
+            <div class="obs-label">Exercices transmis</div>
+            <div style="margin-top:4px">
+              <template x-for="pill in exercicePills(s.exercices)" :key="pill">
+                <span class="pill-ex" x-text="pill"></span>
+              </template>
+            </div>
+          </div>
+          <div x-show="s.prochaine">
+            <div class="obs-label">Intention prochaine séance</div>
+            <div class="obs-text" x-text="s.prochaine"></div>
+          </div>
+          <div x-show="!s.observations && !s.exercices && !s.prochaine"
+               style="font-size:12px;color:var(--cab-text-sec)">Aucune note clinique</div>
+        </div>
+
+        {# Bilan énergétique #}
+        <div x-show="getCardTab(s.id)==='energetique'">
+          <div class="internal-badge">Usage interne — non communiqué au client</div>
+          <div class="section-label">État des méridiens</div>
+          <div x-show="!s.bilan || !activeMeridians(s.bilan).length"
+               style="font-size:12px;color:var(--cab-text-sec);margin-bottom:12px">
+            Aucun bilan enregistré
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
+            <template x-for="m in activeMeridians(s.bilan)" :key="m.id">
+              <span style="font-size:12px;color:var(--cab-text-sec)" x-text="m.name + ' : '"></span>
+              <span class="energie-chip" :class="stateClass(m.state)" x-text="stateLabel(m.state)"></span>
+            </template>
+          </div>
+          <div x-show="s.bilan?.element_dominant">
+            <div class="obs-label">Élément dominant</div>
+            <div class="obs-text" style="margin-bottom:8px" x-text="s.bilan?.element_dominant"></div>
+          </div>
+          <div x-show="s.bilan?.synthese_mtc">
+            <div class="obs-label">Synthèse MTC</div>
+            <div class="obs-text" style="margin-bottom:8px" x-text="s.bilan?.synthese_mtc"></div>
+          </div>
+          <div x-show="s.bilan?.prise_en_charge">
+            <div class="obs-label">Points / zones travaillés</div>
+            <div class="obs-text" style="margin-bottom:8px" x-text="s.bilan?.prise_en_charge"></div>
+          </div>
+          <div x-show="s.bilan?.evolution">
+            <div class="obs-label">Évolution perçue</div>
+            <div class="obs-text" x-text="s.bilan?.evolution"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </template>
+
+</div>

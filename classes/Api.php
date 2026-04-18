@@ -55,17 +55,14 @@ class Api
             $this->serveAsset('cabinet.css', 'text/css');
         }
 
-        if ($path === '/cabinet/cabinet.js') {
-            $this->serveAsset('cabinet.js', 'application/javascript');
+        if (preg_match('#^/cabinet/([\w\-]+\.js)$#', $path, $m)) {
+            $this->serveAsset($m[1], 'application/javascript');
         }
 
         if ($path === '/cabinet/manifest.json') {
             $this->serveAsset('manifest.json', 'application/manifest+json');
         }
 
-        if ($path === '/cabinet/sw.js') {
-            $this->serveAsset('sw.js', 'application/javascript');
-        }
 
         if ($path === '/cabinet/bilan-template.pdf') {
             $this->core->requireGravSession();

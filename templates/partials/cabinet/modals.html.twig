@@ -1,0 +1,175 @@
+<div class="modal-overlay" x-data
+     x-show="$store.cab.modal.open"
+     @click.self="$store.cab.closeModal()"
+     style="display:none">
+  <div class="modal">
+
+    {# ── Nouveau client ── #}
+    <div x-show="$store.cab.modal.type==='new-client'" x-data="cabinetNewClientModal">
+      <div class="modal-head">
+        <span class="modal-title">Nouveau client</span>
+        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      </div>
+      <div class="field-grid">
+        <div class="field"><label>Prénom *</label><input x-model="form.first_name" @keyup.enter="submit()"></div>
+        <div class="field"><label>Nom *</label><input x-model="form.last_name" @keyup.enter="submit()"></div>
+        <div class="field"><label>Téléphone</label><input x-model="form.phone"></div>
+        <div class="field"><label>Email</label><input x-model="form.email"></div>
+        <div class="field field-full"><label>Motif principal</label><input x-model="form.motif"></div>
+      </div>
+      <button class="btn-save" @click="submit()">Créer le dossier</button>
+    </div>
+
+    {# ── Séance (nouvelle / modification) ── #}
+    <div x-show="$store.cab.modal.type==='session'" x-data="cabinetSessionModal">
+      <div class="modal-head">
+        <span class="modal-title" x-text="isEdit ? 'Modifier la séance' : 'Nouvelle séance'"></span>
+        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      </div>
+
+      <div style="display:flex;margin-bottom:18px;border:0.5px solid var(--cab-border);border-radius:8px;overflow:hidden">
+        <div class="stab" :class="{active: modalTab==='clinique'}"
+             @click="modalTab='clinique'" style="flex:1;text-align:center">Clinique</div>
+        <div class="stab" :class="{active: modalTab==='energetique'}"
+             @click="modalTab='energetique'" style="flex:1;text-align:center">Bilan</div>
+      </div>
+
+      <div x-show="modalTab==='clinique'">
+        <div class="field-grid">
+          <div class="field"><label>Date</label><input type="date" x-model="form.date"></div>
+          <div class="field"><label>Heure</label><input type="time" x-model="form.heure"></div>
+          <div class="field"><label>Durée (min)</label><input type="number" x-model="form.duree" min="1" step="5" placeholder="60"></div>
+          <div class="field">
+            <label>Statut</label>
+            <select x-model="form.status">
+              <template x-for="opt in statusOpts()" :key="opt[0]">
+                <option :value="opt[0]" x-text="opt[1]"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label>Type</label>
+            <select x-model="form.appointment_type">
+              <template x-for="opt in typeOpts()" :key="opt[0]">
+                <option :value="opt[0]" x-text="opt[1]"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field field-full">
+            <label>Motif de la séance</label>
+            <input x-model="form.motif" placeholder="ex: douleur lombaire, stress...">
+          </div>
+          <div class="field field-full">
+            <label>Observations cliniques</label>
+            <textarea x-model="form.observations" placeholder="Zones travaillées, réactions, état général..."></textarea>
+          </div>
+          <div class="field field-full">
+            <label>Exercices transmis (séparés par virgule)</label>
+            <input x-model="form.exercices" placeholder="ex: étirement mollet, auto-massage balle">
+          </div>
+          <div class="field field-full">
+            <label>Intention pour la prochaine séance</label>
+            <input x-model="form.prochaine">
+          </div>
+          <div class="field field-full" x-show="smsEnabled" style="margin-top:4px">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" x-model="form.sms_rappel_disabled">
+              Désactiver le rappel SMS J-1 pour cette séance
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div x-show="modalTab==='energetique'">
+        <div class="internal-badge">Usage interne — non communiqué au client</div>
+        <div class="section-label">État des méridiens</div>
+        <div class="meridian-grid">
+          <template x-for="m in meridians()" :key="m.id">
+            <div class="mer-item">
+              <div class="mer-name" x-text="m.name"></div>
+              <select class="mer-select" x-model="bilan[m.id]">
+                <template x-for="st in meridianStates()" :key="st.val">
+                  <option :value="st.val" x-text="st.label"></option>
+                </template>
+              </select>
+            </div>
+          </template>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Élément dominant</label>
+            <select x-model="bilan.element_dominant">
+              <template x-for="el in elementOpts()" :key="el">
+                <option :value="el" x-text="el || '—'"></option>
+              </template>
+            </select>
+          </div>
+          <div class="field">
+            <label>Évolution vs séance précédente</label>
+            <input x-model="bilan.evolution" placeholder="Amélioration, stagnation...">
+          </div>
+          <div class="field field-full">
+            <label>Synthèse MTC</label>
+            <textarea x-model="bilan.synthese_mtc" placeholder="Lecture énergétique globale, déséquilibres principaux..."></textarea>
+          </div>
+          <div class="field field-full">
+            <label>Points / zones travaillés</label>
+            <textarea x-model="bilan.prise_en_charge" placeholder="Points utilisés, techniques appliquées..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-save" @click="submit()"
+              x-text="isEdit ? 'Mettre à jour' : 'Enregistrer la séance'"></button>
+    </div>
+
+    {# ── Configuration Google ── #}
+    <div x-show="$store.cab.modal.type==='settings'" x-data="cabinetSettingsModal">
+      <div class="modal-head">
+        <span class="modal-title">Configuration Google</span>
+        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      </div>
+      <div class="internal-badge">Ces paramètres sont stockés sur cet appareil uniquement</div>
+      <div class="field-grid">
+        <div class="field field-full">
+          <label>Google OAuth2 Client ID</label>
+          <input x-model="clientId" placeholder="xxxx.apps.googleusercontent.com">
+          <span style="font-size:11px;color:#666;margin-top:4px">
+            Google Cloud Console → APIs → Drive API → Identifiants → Client OAuth 2.0<br>
+            Origine autorisée : <strong>https://goubs.net</strong>
+          </span>
+        </div>
+        <div class="field field-full">
+          <label>Identifiant du calendrier Google</label>
+          <input x-model="calId" placeholder="xxxx@group.calendar.google.com">
+          <span style="font-size:11px;color:#666;margin-top:4px">
+            Paramètres du calendrier → « Adresse de l'agenda ». Laisser vide pour désactiver.
+          </span>
+        </div>
+      </div>
+      <button class="btn-save" @click="save()">Enregistrer et connecter</button>
+    </div>
+
+    {# ── Vérification globale ── #}
+    <div x-show="$store.cab.modal.type==='verif'" x-data>
+      <div class="modal-head">
+        <span class="modal-title">Vérification globale</span>
+        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      </div>
+      <div class="verif-log">
+        <template x-for="(entry, i) in $store.cab.modal.verifLog" :key="i">
+          <div class="verif-entry" :class="entry.type ? 'verif-' + entry.type : ''" x-html="entry.msg"></div>
+        </template>
+      </div>
+      <div class="verif-footer"
+           :class="$store.cab.modal.verifDone
+             ? ($store.cab.modal.verifSummary?.ok ? 'verif-footer-ok' : 'verif-footer-warn')
+             : ''"
+           x-text="$store.cab.modal.verifDone
+             ? ($store.cab.modal.verifSummary?.text || '')
+             : 'En cours…'">
+      </div>
+    </div>
+
+  </div>
+</div>

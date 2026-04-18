@@ -198,7 +198,7 @@ class Seances
     {
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
-        $dir = $flex ? $flex->getDirectory('clients') : null;
+        $dir = $this->getClientsDirectory($flex);
         if (!$dir) {
             $this->core->jsonExit(['error' => 'clients directory unavailable'], 500);
         }
@@ -276,7 +276,7 @@ class Seances
     {
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
-        $clientsDir = $flex ? $flex->getDirectory('clients') : null;
+        $clientsDir = $this->getClientsDirectory($flex);
         $rendezVousDir = $this->getRendezVousDirectory($flex);
 
         $sessions = [];
@@ -574,6 +574,32 @@ class Seances
         }
 
         return $flex->getDirectory('rendez_vous');
+    }
+
+    private function getClientsDirectory($flex)
+    {
+        if (!$flex) {
+            return null;
+        }
+
+        $directory = $flex->getDirectory('clients');
+        if ($directory) {
+            return $directory;
+        }
+
+        $blueprint = dirname(__DIR__) . '/blueprints/flex-objects/clients.yaml';
+        if (!file_exists($blueprint)) {
+            return null;
+        }
+
+        try {
+            $flex->addDirectoryType('clients', $blueprint);
+        } catch (\Throwable $e) {
+            $this->core->debugLog('clients addDirectoryType failed', ['error' => $e->getMessage()]);
+            return null;
+        }
+
+        return $flex->getDirectory('clients');
     }
 
     private function flexStatusToSessionStatus(string $status): string
