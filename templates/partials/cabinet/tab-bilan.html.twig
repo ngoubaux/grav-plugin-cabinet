@@ -1,0 +1,81 @@
+<div x-show="$store.cab.activeTab==='bilan'" x-data="cabinetBilan">
+
+  {# ── PDF tablette ── #}
+  <div x-show="!$store.cab.driveConnected" class="bilan-pdf-notice">
+    Connectez Google Drive pour afficher le bilan tablette.
+  </div>
+  <div x-show="$store.cab.driveConnected && $store.cab.bilanLoading" class="bilan-pdf-notice">
+    Recherche du bilan tablette…
+  </div>
+  <div x-show="$store.cab.driveConnected && !$store.cab.bilanLoading && $store.cab.bilanFile">
+    <div class="bilan-pdf-section">
+      <div class="bilan-pdf-header">
+        <span class="section-label" style="margin:0">Bilan tablette</span>
+        <a :href="'https://drive.google.com/file/d/' + $store.cab.bilanFile?.fileId + '/view'"
+           target="_blank" class="btn-ghost" style="font-size:11px;padding:4px 10px">
+          Ouvrir dans Drive &#8599;
+        </a>
+      </div>
+      <div class="bilan-pdf-viewer">
+        <iframe :src="$store.cab.bilanFile ? 'https://drive.google.com/file/d/' + $store.cab.bilanFile.fileId + '/preview' : ''"
+                frameborder="0" allowfullscreen loading="lazy"></iframe>
+      </div>
+    </div>
+  </div>
+  <div x-show="$store.cab.driveConnected && !$store.cab.bilanLoading && $store.cab.bilanFile === null"
+       class="bilan-pdf-notice bilan-pdf-missing">
+    Aucun bilan tablette pour
+    <strong x-text="(($store.cab.activeClient?.first_name || '') + ' ' + ($store.cab.activeClient?.last_name || '')).trim()"></strong>.<br>
+    <span style="font-size:11px">Fichier attendu :
+      <code x-text="(($store.cab.activeClient?.first_name || '') + ' ' + ($store.cab.activeClient?.last_name || '')).trim() + '.pdf'"></code>
+    </span>
+    <div style="margin-top:10px">
+      <button class="btn-ghost" style="font-size:12px" @click="uploadTemplate()">
+        Envoyer la fiche vierge sur Drive →
+      </button>
+    </div>
+  </div>
+
+  {# ── Évolution énergétique ── #}
+  <div class="evolution-header" style="margin-top:20px">
+    <div class="section-label" style="margin:0">Évolution énergétique</div>
+    <div class="internal-badge" style="margin:0">Usage interne uniquement</div>
+  </div>
+
+  <div x-show="sessionsWithBilan.length === 0" class="no-sessions">
+    Aucun bilan enregistré.<br>
+    <span style="font-size:12px">Ajoutez un bilan dans l'onglet Séances → sous-onglet "Bilan".</span>
+  </div>
+
+  <div x-show="sessionsWithBilan.length > 0">
+    <div class="mer-legend">
+      <template x-for="entry in legendEntries()" :key="entry.val">
+        <span class="energie-chip" :class="entry.cls" x-text="entry.label"></span>
+      </template>
+    </div>
+    <div class="bilan-timeline">
+      <template x-for="s in sessionsWithBilan" :key="s.id">
+        <div class="timeline-item">
+          <div class="timeline-date" x-text="s.date + (s.motif ? ' · ' + s.motif : '')"></div>
+          <div class="timeline-chips" x-show="activeMeridians(s.bilan).length > 0">
+            <template x-for="m in activeMeridians(s.bilan)" :key="m.id">
+              <span class="energie-chip" :class="stateClass(m.state)" :title="m.name">
+                <span x-text="m.id + ' '"></span>
+                <span style="font-weight:500" x-text="m.name"></span>
+              </span>
+            </template>
+          </div>
+          <div x-show="s.bilan?.element_dominant"
+               style="font-size:11px;color:var(--cab-text-sec);margin-bottom:4px">
+            Élément : <strong x-text="s.bilan?.element_dominant"></strong>
+          </div>
+          <div class="timeline-synth" x-show="s.bilan?.synthese_mtc" x-text="s.bilan?.synthese_mtc"></div>
+          <div x-show="s.bilan?.evolution"
+               style="font-size:12px;color:var(--cab-text-sec);margin-top:6px;font-style:italic"
+               x-text="s.bilan?.evolution"></div>
+        </div>
+      </template>
+    </div>
+  </div>
+
+</div>

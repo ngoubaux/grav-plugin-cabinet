@@ -1,0 +1,47 @@
+<div id="sidebar_agenda_body" x-show="view==='agenda'"
+     style="display:flex;flex-direction:column;flex:1;min-height:0"
+     x-data="cabinetAgenda">
+
+  <div class="cal-header">
+    <button class="cal-nav" @click="changeMonth(-1)">&#8249;</button>
+    <span class="cal-month" x-text="monthLabel"></span>
+    <button class="cal-nav" @click="changeMonth(1)">&#8250;</button>
+  </div>
+
+  <div class="cal-grid">
+    <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">M</div>
+    <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div><div class="cal-dow">D</div>
+    <template x-for="(cell, i) in calRows" :key="i">
+      <div class="cal-day"
+           :class="{other: cell.empty, today: cell.isToday, 'has-session': cell.hasSession}"
+           @click="cell.hasSession && scrollToDate(cell.dateStr)">
+        <span x-text="cell.d || ''"></span>
+        <div class="cal-pip" x-show="cell.hasSession"></div>
+      </div>
+    </template>
+  </div>
+
+  <div style="border-top:0.5px solid #e2e2e2;padding:10px 16px 4px;font-size:11px;font-weight:500;color:#666;text-transform:uppercase;letter-spacing:.5px">
+    Séances du mois
+  </div>
+
+  <div class="agenda-list" style="overflow-y:auto;flex:1">
+    <div x-show="monthGroups.length === 0" class="agenda-empty">Aucune séance ce mois-ci</div>
+    <template x-for="group in monthGroups" :key="group.dateStr">
+      <div class="agenda-group" :id="'date_' + group.dateStr">
+        <div class="agenda-date-header" x-text="group.label"></div>
+        <template x-for="entry in group.entries" :key="entry.id">
+          <div class="agenda-entry" :class="{past: group.isPast}" @click="goToClient(entry.cid)">
+            <div class="agenda-time" x-text="(entry.heure || '').slice(0,5)"></div>
+            <div>
+              <div class="agenda-client" x-text="entry.clientName"></div>
+              <div class="agenda-motif" x-show="entry.motif" x-text="entry.motif"></div>
+            </div>
+            <div class="agenda-dur" x-show="entry.duree" x-text="entry.duree + ' min'"></div>
+          </div>
+        </template>
+      </div>
+    </template>
+  </div>
+
+</div>

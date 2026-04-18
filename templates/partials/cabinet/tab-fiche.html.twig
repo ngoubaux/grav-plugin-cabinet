@@ -1,0 +1,112 @@
+<div x-show="$store.cab.activeTab==='fiche'">
+
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-n" x-text="$store.cab.activeSessionCount"></div>
+      <div class="stat-l">Séances</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n" style="font-size:14px" x-text="$store.cab.activeSessions.length ? $store.cab.activeSessions[0].date : '—'"></div>
+      <div class="stat-l">Dernière séance</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-n" style="font-size:14px" x-text="$store.cab.activeClient?.created ? new Date($store.cab.activeClient.created).toLocaleDateString('fr-FR') : '—'"></div>
+      <div class="stat-l">Dossier créé</div>
+    </div>
+  </div>
+
+  <div class="section-label">Identité</div>
+  <div class="field-grid">
+    <div class="field"><label>Prénom</label><input x-model="$store.cab.activeClient.first_name"></div>
+    <div class="field"><label>Nom</label><input x-model="$store.cab.activeClient.last_name"></div>
+    <div class="field"><label>Date de naissance</label><input type="date" x-model="$store.cab.activeClient.ddn"></div>
+    <div class="field"><label>Téléphone</label><input x-model="$store.cab.activeClient.phone"></div>
+    <div class="field field-full"><label>Email</label><input x-model="$store.cab.activeClient.email"></div>
+  </div>
+
+  <div class="section-label">Motif &amp; contexte</div>
+  <div class="field-grid">
+    <div class="field field-full">
+      <label>Motif de consultation</label>
+      <input x-model="$store.cab.activeClient.motif">
+    </div>
+    <div class="field field-full">
+      <label>Antécédents &amp; contexte de santé</label>
+      <textarea x-model="$store.cab.activeClient.antecedents"></textarea>
+    </div>
+    <div class="field field-full">
+      <label>Notes praticien (internes)</label>
+      <textarea x-model="$store.cab.activeClient.notes"></textarea>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:10px;align-items:center">
+    <button class="btn-save" @click="$store.cab.saveFiche()">Enregistrer</button>
+    <button class="btn-ghost" @click="$store.cab.deleteClient()">Supprimer le dossier</button>
+  </div>
+
+  {# ── Lien Grav ── #}
+  <div style="margin-top:20px">
+    <div class="section-label">Lien Grav · Préparez votre visite</div>
+    <div class="grav-section">
+
+      <div class="grav-section-title">
+        <div class="grav-dot"
+             :class="{found: $store.cab.activeClient?.grav_uuid, searching: $store.cab.activeClient?._gravSearching}"></div>
+        <span x-text="$store.cab.activeClient?.grav_uuid
+          ? 'Contact Grav lié'
+          : ($store.cab.activeClient?._gravSearching
+            ? 'Recherche en cours…'
+            : ($store.cab.activeClient?._gravNotFound
+              ? 'Aucun contact trouvé sur Grav'
+              : 'Non lié à un contact Grav'))"></span>
+        <button class="btn-grav"
+                x-show="!$store.cab.activeClient?.grav_uuid"
+                :disabled="$store.cab.activeClient?._gravSearching"
+                @click="$store.cab.searchGravContact($store.cab.activeId)">
+          Rechercher sur Grav
+        </button>
+      </div>
+
+      <template x-if="$store.cab.activeClient?.grav_uuid">
+        <div>
+          <div class="obs-label">UUID</div>
+          <div class="grav-uuid-display" x-text="$store.cab.activeClient.grav_uuid"></div>
+          <template x-if="$store.cab.activeClient.grav_rdv">
+            <div>
+              <div class="obs-label" style="margin-top:8px">Premier RDV enregistré</div>
+              <div style="font-size:13px" x-text="$store.cab.activeClient.grav_rdv"></div>
+            </div>
+          </template>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+            <a class="grav-link"
+               :href="'/preparons-votre-visite/id:' + $store.cab.activeClient.grav_uuid"
+               target="_blank">Ouvrir la page client →</a>
+            <button class="btn-ghost" style="font-size:12px"
+                    @click="$store.cab.unlinkGrav($store.cab.activeId)">Délier</button>
+          </div>
+        </div>
+      </template>
+
+      <template x-if="!$store.cab.activeClient?.grav_uuid">
+        <div style="font-size:12px;color:var(--cab-text-sec);margin-top:6px">
+          La recherche utilise l'email du client en priorité, puis le nom et prénom.
+        </div>
+      </template>
+
+      {# ── SMS ── #}
+      <div class="sms-template" style="margin-top:12px">
+        <div class="sms-template-head">
+          <span>SMS préparation visite</span>
+          <div style="display:flex;gap:6px">
+            <button class="btn-ghost sms-send-btn" @click="$store.cab.sendPreparationSms()">Envoyer SMS</button>
+            <button class="btn-ghost sms-copy-btn" @click="$store.cab.copyPreparationSms($store.cab.preparationSms)">Copier</button>
+          </div>
+        </div>
+        <textarea readonly x-text="$store.cab.preparationSms"></textarea>
+      </div>
+
+    </div>
+  </div>
+
+</div>

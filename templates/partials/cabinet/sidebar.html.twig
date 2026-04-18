@@ -1,0 +1,58 @@
+<div class="sidebar" x-data="cabinetSidebar"
+     @set-sidebar-view.window="setView($event.detail)">
+
+  <div class="sidebar-nav">
+    <div class="snav" :class="{active: view==='clients'}" @click="setView('clients')">Clients</div>
+    <div class="snav" :class="{active: view==='agenda'}"  @click="setView('agenda')">Agenda</div>
+  </div>
+
+  {# ── Clients ── #}
+  <div class="sidebar-head" x-show="view==='clients'">
+    <span class="sidebar-title">Clients</span>
+    <button class="btn-add" @click="$store.cab.openModal('new-client')">+ Nouveau</button>
+  </div>
+
+  <div id="sidebar_clients_body" x-show="view==='clients'"
+       style="display:flex;flex-direction:column;flex:1;min-height:0">
+    <div class="search-wrap">
+      <input type="text" placeholder="Rechercher…"
+             x-model="$store.cab.searchQuery"
+             @input="$store.cab.renderList()"
+             autocomplete="off" autocorrect="off" autocapitalize="off"
+             spellcheck="false" data-1p-ignore data-lpignore>
+    </div>
+    <div class="client-list">
+      <template x-for="client in $store.cab.clientList" :key="client._id">
+        <div class="client-item"
+             :class="{active: $store.cab.activeId === client._id}"
+             @click="$store.cab.selectClient(client._id)">
+          <div class="client-name" x-text="client.first_name + ' ' + client.last_name"></div>
+          <div class="client-meta" x-text="client.motif || '—'"></div>
+          <div class="client-badge" x-show="client._sessionCount > 0"
+               x-text="client._sessionCount + ' séance' + (client._sessionCount > 1 ? 's' : '')"></div>
+        </div>
+      </template>
+      <div x-show="$store.cab.clientList.length === 0"
+           style="padding:16px;text-align:center;font-size:12px;color:var(--cab-text-sec)">
+        Aucun client
+        <div x-show="$store.cab.loadState === 'error'" style="margin-top:8px;color:#a33;font-size:11px" x-text="$store.cab.loadError"></div>
+        <button type="button" class="btn-verif" style="margin-top:8px" @click="$store.cab.load()">Recharger</button>
+      </div>
+    </div>
+  </div>
+
+  {# ── Agenda ── #}
+  {% include 'partials/cabinet/sidebar-agenda.html.twig' %}
+
+  {# ── Drive bar ── #}
+  <div class="drive-bar" x-data="cabinetDriveBar">
+    <div class="drive-status">
+      <div class="drive-dot" :class="$store.cab.driveStatus.state"></div>
+      <span x-text="$store.cab.driveStatus.label"></span>
+      <button class="btn-drive" @click="toggleDrive()"
+              x-text="$store.cab.driveConnected ? 'Déconnecter Drive' : 'Connecter Drive'"></button>
+      <button class="btn-verif" x-show="$store.cab.driveConnected" @click="openVerif()">Vérifier</button>
+    </div>
+  </div>
+
+</div>

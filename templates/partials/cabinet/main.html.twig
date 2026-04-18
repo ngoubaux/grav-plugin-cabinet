@@ -1,0 +1,33 @@
+<div class="main" id="mainArea">
+
+  <div class="empty-state" x-show="!$store.cab.activeId">
+    <div style="width:40px;height:40px;border-radius:50%;background:var(--cab-surface);display:flex;align-items:center;justify-content:center;font-size:18px">&#128100;</div>
+    <span style="font-size:13px">Sélectionnez un client</span>
+    <span style="font-size:12px;color:var(--cab-text-sec)">ou créez un nouveau dossier</span>
+  </div>
+
+  <template x-if="$store.cab.activeId">
+    <div style="display:flex;flex-direction:column;flex:1;min-height:0">
+
+      <div class="main-tabs">
+        <button class="btn-back" @click="$store.cab.goBack()" title="Retour">&#8592;</button>
+        <div class="tab" :class="{active: $store.cab.activeTab==='fiche'}"
+             @click="$store.cab.setTab('fiche')">Fiche client</div>
+        <div class="tab" :class="{active: $store.cab.activeTab==='seances'}"
+             @click="$store.cab.setTab('seances')">
+          Séances (<span x-text="$store.cab.activeSessionCount"></span>)
+        </div>
+        <div class="tab" :class="{active: $store.cab.activeTab==='bilan'}"
+             @click="$store.cab.setTab('bilan')">Bilan</div>
+      </div>
+
+      <div class="main-body">
+        {% include 'partials/cabinet/tab-fiche.html.twig' %}
+        {% include 'partials/cabinet/tab-seances.html.twig' %}
+        {% include 'partials/cabinet/tab-bilan.html.twig' %}
+      </div>
+
+    </div>
+  </template>
+
+</div>
