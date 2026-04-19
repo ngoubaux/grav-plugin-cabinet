@@ -40,13 +40,13 @@
     </div>
   </div>
 
-  <div style="display:flex;gap:10px;align-items:center">
+  <div class="btn-row">
     <button class="btn-save" @click="$store.cab.saveFiche()">Enregistrer</button>
     <button class="btn-ghost" @click="$store.cab.deleteClient()">Supprimer le dossier</button>
   </div>
 
   {# ── Lien Grav ── #}
-  <div style="margin-top:20px">
+  <div class="section-block">
     <div class="section-label">Lien Grav · Préparez votre visite</div>
     <div class="grav-section">
 
@@ -82,7 +82,7 @@
             <a class="grav-link"
                :href="'/preparons-votre-visite/id:' + $store.cab.activeClient.grav_uuid"
                target="_blank">Ouvrir la page client →</a>
-            <button class="btn-ghost" style="font-size:12px"
+            <button class="btn-ghost btn-sm" style="font-size:12px"
                     @click="$store.cab.unlinkGrav($store.cab.activeId)">Délier</button>
           </div>
         </div>
@@ -98,7 +98,7 @@
       <div class="sms-template" style="margin-top:12px">
         <div class="sms-template-head">
           <span>SMS préparation visite</span>
-          <div style="display:flex;gap:6px">
+          <div class="btn-row">
             <button class="btn-ghost sms-send-btn" @click="$store.cab.sendPreparationSms()">Envoyer SMS</button>
             <button class="btn-ghost sms-copy-btn" @click="$store.cab.copyPreparationSms($store.cab.preparationSms)">Copier</button>
           </div>

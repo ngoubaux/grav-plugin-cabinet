@@ -1,6 +1,6 @@
 {% extends 'partials/base.html.twig' %}
 
-{% set cab_ver = '20260418-11' %}
+{% set cab_ver = '20260419-14' %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -12,10 +12,24 @@
   {% do assets.addJs('https://apis.google.com/js/api.js', {group: 'head', loading: 'defer'}) %}
   {% do assets.addJs('https://accounts.google.com/gsi/client', {group: 'head', loading: 'async'}) %}
   {% do assets.addJs('https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js', {group: 'head', loading: 'defer'}) %}
-  {% do assets.addJs('/cabinet/cab-utils.js?v=' ~ cab_ver,      {group: 'bottom', priority: 10}) %}
-  {% do assets.addJs('/cabinet/cab-drive.js?v=' ~ cab_ver,      {group: 'bottom', priority: 8}) %}
-  {% do assets.addJs('/cabinet/cab-store.js?v=' ~ cab_ver,      {group: 'bottom', priority: 7}) %}
-  {% do assets.addJs('/cabinet/cab-components.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {# utils — chargés en premier, pas de dépendances entre eux #}
+  {% do assets.addJs('/cabinet/utils/constants.js?v=' ~ cab_ver, {group: 'bottom', priority: 22}) %}
+  {% do assets.addJs('/cabinet/utils/helpers.js?v=' ~ cab_ver,   {group: 'bottom', priority: 20}) %}
+  {% do assets.addJs('/cabinet/utils/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 18}) %}
+  {% do assets.addJs('/cabinet/utils/api.js?v=' ~ cab_ver,       {group: 'bottom', priority: 17}) %}
+  {% do assets.addJs('/cabinet/utils/sms.js?v=' ~ cab_ver,       {group: 'bottom', priority: 16}) %}
+  {# drive — dépend des utils #}
+  {% do assets.addJs('/cabinet/cab-drive.js?v=' ~ cab_ver,       {group: 'bottom', priority: 14}) %}
+  {# store — dépend de tout ce qui précède #}
+  {% do assets.addJs('/cabinet/store/index.js?v=' ~ cab_ver,     {group: 'bottom', priority: 12}) %}
+  {# components — chacun définit une factory function globale #}
+  {% do assets.addJs('/cabinet/components/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 9}) %}
+  {% do assets.addJs('/cabinet/components/sidebar.js?v=' ~ cab_ver,   {group: 'bottom', priority: 8}) %}
+  {% do assets.addJs('/cabinet/components/modal.js?v=' ~ cab_ver,     {group: 'bottom', priority: 7}) %}
+  {% do assets.addJs('/cabinet/components/accordion.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {% do assets.addJs('/cabinet/components/drive-bar.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {# main — point d'entrée Alpine, enregistre tout #}
+  {% do assets.addJs('/cabinet/main.js?v=' ~ cab_ver,            {group: 'bottom', priority: 5}) %}
 {% endblock %}
 
 {% block body %}
@@ -32,6 +46,6 @@
 
 <script>
   if('serviceWorker' in navigator)
-    navigator.serviceWorker.register('/cabinet/sw.js').catch(()=>{});
+    navigator.serviceWorker.register('/cabinet/sw.js?v={{ cab_ver }}').catch(()=>{});
 </script>
 {% endblock %}

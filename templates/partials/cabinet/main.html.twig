@@ -1,13 +1,13 @@
-<div class="main" id="mainArea">
+<div class="main" id="mainArea" x-data="cabinetMain" @cabinet:client-selected.window="forceRefresh()">
 
-  <div class="empty-state" x-show="!$store.cab.activeId">
+  <div class="empty-state" x-show="refreshOn && !$store.cab.activeId">
     <div style="width:40px;height:40px;border-radius:50%;background:var(--cab-surface);display:flex;align-items:center;justify-content:center;font-size:18px">&#128100;</div>
     <span style="font-size:13px">Sélectionnez un client</span>
     <span style="font-size:12px;color:var(--cab-text-sec)">ou créez un nouveau dossier</span>
   </div>
 
-  <template x-if="$store.cab.activeId">
-    <div style="display:flex;flex-direction:column;flex:1;min-height:0">
+  <template x-if="refreshOn && $store.cab.activeId">
+    <div class="main-content">
 
       <div class="main-tabs">
         <button class="btn-back" @click="$store.cab.goBack()" title="Retour">&#8592;</button>

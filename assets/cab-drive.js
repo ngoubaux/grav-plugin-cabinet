@@ -95,6 +95,11 @@ let _bilanFolderIdCache = null;
 let _bilanFileCache = {};
 let _tokenRefreshTimer = null;
 
+/* Notifie le composant drive-bar via CustomEvent (bypass scheduler Alpine) */
+function _driveUpdate(connected, state, label) {
+  window.dispatchEvent(new CustomEvent('cab:drive-update', {detail: {connected, state, label}}));
+}
+
 function _getDriveToken() { return _driveToken; }
 
 function _saveToken(token, expiresIn) {
@@ -128,7 +133,8 @@ function _applyToken(token, expiresIn) {
 
   const store = Alpine.store('cab');
   store.driveConnected = true;
-  store.driveStatus = {state:'ok', label:'Google connecté'};
+  Object.assign(store.driveStatus, {state:'ok', label:'Google connecté'});
+  _driveUpdate(true, 'ok', 'Google connecté');
   store.renderList();
   if(store.activeTab==='bilan') store.loadBilanFile();
 }
@@ -165,13 +171,13 @@ function _initTokenClient(clientId, silent=false) {
     scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/documents https://www.googleapis.com/auth/calendar.events',
     callback: async (resp) => {
       if(resp.error){
-        if(!silent) Alpine.store('cab').driveStatus={state:'error',label:"Erreur d'authentification"};
+        if(!silent) { Object.assign(Alpine.store('cab').driveStatus, {state:'error', label:"Erreur d'authentification"}); _driveUpdate(null, 'error', "Erreur d'authentification"); }
         return;
       }
       _applyToken(resp.access_token, resp.expires_in||3600);
     },
     error_callback: () => {
-      if(!silent) Alpine.store('cab').driveStatus={state:'error',label:"Erreur d'authentification"};
+      if(!silent) Object.assign(Alpine.store('cab').driveStatus, {state:'error', label:"Erreur d'authentification"});
     }
   });
   if(silent) window._tokenClient.requestAccessToken({prompt:''});
@@ -180,9 +186,10 @@ function _initTokenClient(clientId, silent=false) {
 function driveAuth() {
   const cid = localStorage.getItem('gdrive_client_id');
   if(!cid){ Alpine.store('cab').openModal('settings'); return; }
-  if(!window._tokenClient) _initTokenClient(cid, false);
-  Alpine.store('cab').driveStatus = {state:'loading', label:'Connexion…'};
-  window._tokenClient.requestAccessToken({prompt:''});
+  _initTokenClient(cid, false);  // Always reinit for interactive flow with proper callbacks
+  Object.assign(Alpine.store('cab').driveStatus, {state:'loading', label:'Connexion…'});
+  _driveUpdate(null, 'loading', 'Connexion…');
+  window._tokenClient.requestAccessToken({prompt:'consent'});  // Force consent prompt if needed
 }
 
 function driveSignOut() {
@@ -194,7 +201,8 @@ function driveSignOut() {
   _bilanFileCache = {};
   const store = Alpine.store('cab');
   store.driveConnected = false;
-  store.driveStatus = {state:'', label:'Non connecté'};
+  Object.assign(store.driveStatus, {state:'', label:'Non connecté'});
+  _driveUpdate(false, '', 'Non connecté');
   store.clients = {};
   store.sessions = {};
   store.renderList();
@@ -205,7 +213,8 @@ async function driveGet(path, params='') {
     headers: {'Authorization':'Bearer '+_driveToken}
   });
   if(r.status===401){
-    Alpine.store('cab').driveStatus={state:'error',label:'Session expirée — reconnectez'};
+    Object.assign(Alpine.store('cab').driveStatus, {state:'error', label:'Session expirée — reconnectez'});
+    _driveUpdate(null, 'error', 'Session expirée — reconnectez');
     return null;
   }
   return r.ok ? r.json() : null;
@@ -336,7 +345,8 @@ async function gcalUpdateEvent(eventId, clientId, session) {
 
 async function createGoogleDoc(name, content) {
   if(!_driveToken){ alert("Connectez Google Drive d'abord."); return null; }
-  Alpine.store('cab').driveStatus={state:'loading',label:'Création du document…'};
+  Object.assign(Alpine.store('cab').driveStatus, {state:'loading', label:'Création du document…'});
+  _driveUpdate(null, 'loading', 'Création du document…');
   try{
     const r1=await fetch('https://www.googleapis.com/drive/v3/files',{
       method:'POST',
@@ -350,10 +360,12 @@ async function createGoogleDoc(name, content) {
       headers:{'Authorization':'Bearer '+_driveToken,'Content-Type':'application/json'},
       body:JSON.stringify({requests:[{insertText:{location:{index:1},text:content}}]})
     });
-    Alpine.store('cab').driveStatus={state:'ok',label:'Document créé'};
+    Object.assign(Alpine.store('cab').driveStatus, {state:'ok', label:'Document créé'});
+    _driveUpdate(null, 'ok', 'Document créé');
     return doc.id;
   }catch(e){
-    Alpine.store('cab').driveStatus={state:'error',label:'Erreur : '+e.message};
+    Object.assign(Alpine.store('cab').driveStatus, {state:'error', label:'Erreur : '+e.message});
+    _driveUpdate(null, 'error', 'Erreur : '+e.message);
     return null;
   }
 }
@@ -472,7 +484,23 @@ async function runGlobalVerification() {
 }
 
 // Initialize Google API
-if(typeof gapi!=='undefined')
-  window.addEventListener('load', initGapi);
-else
-  document.querySelector('script[src*="apis.google.com"]')?.addEventListener('load', initGapi);
+// Robust gapi initialization with multiple fallback triggers
+if(typeof gapi !== 'undefined' && gapi.load) {
+  if(document.readyState === 'loading')
+    window.addEventListener('load', initGapi);
+  else
+    initGapi();  // DOM already loaded
+} else {
+  const gapiScript = document.querySelector('script[src*="apis.google.com"]');
+  if(gapiScript) {
+    if(gapiScript.loaded || gapiScript.readyState === 'loaded')
+      initGapi();  // Script already loaded
+    else
+      gapiScript.addEventListener('load', initGapi);
+  } else {
+    // Script not yet present; listen for it to be added
+    window.addEventListener('load', () => {
+      if(typeof gapi !== 'undefined' && gapi.load) initGapi();
+    });
+  }
+}
