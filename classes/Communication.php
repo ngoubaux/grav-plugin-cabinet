@@ -233,8 +233,9 @@ class Communication
     }
 
     /**
-     * Mark a queued SMS as sent (status → 'sent').
-     * Called by the Termux cron script after a successful termux-sms-send.
+     * Update a queued SMS status after a send attempt.
+     * Body: {"status": "sent"} or {"status": "error", "error": "reason"}
+     * Called by the Termux cron script after termux-sms-send succeeds or fails.
      */
     public function ackSmsQueueItem(string $id): void
     {
@@ -250,8 +251,20 @@ class Communication
             $this->core->jsonExit(['error' => 'Not an SMS record'], 400);
         }
 
-        $obj->status = 'sent';
-        $obj->sent_at = date('c');
+        $body   = json_decode(file_get_contents('php://input'), true) ?? [];
+        $status = strtolower(trim((string) ($body['status'] ?? 'sent')));
+
+        if (!in_array($status, ['sent', 'error'], true)) {
+            $this->core->jsonExit(['error' => "Invalid status '$status'. Use 'sent' or 'error'."], 400);
+        }
+
+        $obj->status = $status;
+        if ($status === 'sent') {
+            $obj->sent_at = date('c');
+        } else {
+            $obj->error_at      = date('c');
+            $obj->error_message = (string) ($body['error'] ?? '');
+        }
         $obj->save();
 
         $this->core->jsonExit(['ok' => true]);

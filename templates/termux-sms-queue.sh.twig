@@ -1,0 +1,78 @@
+{% autoescape false %}#!/data/data/com.termux/files/usr/bin/bash
+# termux-sms-queue.sh — généré par Cabinet (Grav) le {{ generated_at }}
+# ─────────────────────────────────────────────────────────────────────────────
+
+CABINET_URL="{{ cabinet_url }}"
+API_KEY="{{ api_key }}"
+SIM_SLOT="{{ sim_slot }}"
+LOG_FILE="$HOME/sms-queue.log"
+MAX_LOG_LINES=500
+CURL_TIMEOUT=15
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"; }
+die() { log "ERREUR : $*"; exit 1; }
+
+if [ -f "$LOG_FILE" ] && [ "$(wc -l < "$LOG_FILE")" -gt "$MAX_LOG_LINES" ]; then
+    tail -n "$MAX_LOG_LINES" "$LOG_FILE" > "${LOG_FILE}.tmp" && mv "${LOG_FILE}.tmp" "$LOG_FILE"
+fi
+
+for cmd in curl jq termux-sms-send; do
+    command -v "$cmd" > /dev/null 2>&1 || die "Commande '$cmd' introuvable."
+done
+
+log "--- Démarrage ---"
+queue_response=$(curl -sf --max-time "$CURL_TIMEOUT" \
+    -H "X-Api-Key: $API_KEY" \
+    -H "Accept: application/json" \
+    "$CABINET_URL/api/cabinet/sms/queue")
+[ $? -ne 0 ] && die "Impossible de joindre le serveur."
+echo "$queue_response" | jq -e '.items' > /dev/null 2>&1 \
+    || die "Réponse inattendue : $queue_response"
+
+count=$(echo "$queue_response" | jq '.items | length')
+log "$count SMS en attente"
+[ "$count" -eq 0 ] && { log "File vide."; exit 0; }
+
+sent=0
+failed=0
+
+while IFS= read -r item; do
+    id=$(echo "$item"      | jq -r '.id')
+    to=$(echo "$item"      | jq -r '.to')
+    message=$(echo "$item" | jq -r '.message')
+
+    [ -z "$id" ] || [ -z "$to" ] || [ -z "$message" ] && {
+        log "SKIP item malformé : $(echo "$item" | jq -c '.')"
+        continue
+    }
+
+    log "Envoi SMS id=$id vers $to"
+    sms_cmd=(termux-sms-send -n "$to")
+    [ -n "$SIM_SLOT" ] && sms_cmd+=(-s "$SIM_SLOT")
+    sms_cmd+=("$message")
+
+    send_output=$("${sms_cmd[@]}" 2>&1)
+    send_exit=$?
+
+    if [ $send_exit -eq 0 ]; then
+        log "SMS id=$id envoyé"
+        ack=$(curl -sf --max-time "$CURL_TIMEOUT" -X POST \
+            -H "X-Api-Key: $API_KEY" \
+            -H "Content-Type: application/json" \
+            "$CABINET_URL/api/cabinet/sms/queue/$id/ack")
+        if [ $? -eq 0 ] && echo "$ack" | jq -e '.ok' > /dev/null 2>&1; then
+            log "ACK id=$id → statut 'sent'"
+            sent=$((sent + 1))
+        else
+            log "AVERT : ACK échoué pour id=$id (réponse=$ack)"
+            failed=$((failed + 1))
+        fi
+    else
+        log "ERREUR termux-sms-send id=$id : $send_output"
+        failed=$((failed + 1))
+    fi
+
+done < <(echo "$queue_response" | jq -c '.items[]')
+
+log "Terminé — $sent envoyé(s), $failed échec(s)"
+{% endautoescape %}
