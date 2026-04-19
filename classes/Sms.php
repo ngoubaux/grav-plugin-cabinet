@@ -25,9 +25,11 @@ class Sms
     /**
      * Send a single SMS.
      *
+     * @param string $clientUuid Optional — used by MacroDroid provider to link the queued
+     *                           SMS to a client record in the communications history.
      * @return array{ok: bool, error?: string}
      */
-    public function send(string $phone, string $message): array
+    public function send(string $phone, string $message, string $clientUuid = ''): array
     {
         $phone = $this->normalizePhone($phone);
         if ($phone === '') {
@@ -39,7 +41,7 @@ class Sms
         $provider = $this->getProvider();
 
         if ($provider === self::MACRODROID_PROVIDER) {
-            return $this->queueViaMacroDroid($phone, $message);
+            return $this->queueViaMacroDroid($phone, $message, $clientUuid);
         }
 
         if ($provider === self::SIMPLE_GATEWAY_PROVIDER || $provider === self::LEGACY_HTTP_GATEWAY_PROVIDER) {
@@ -56,7 +58,7 @@ class Sms
      *
      * @return array{ok: bool, queued?: bool, error?: string}
      */
-    private function queueViaMacroDroid(string $phone, string $message): array
+    private function queueViaMacroDroid(string $phone, string $message, string $clientUuid = ''): array
     {
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
@@ -91,7 +93,7 @@ class Sms
         $obj->status      = 'prepared';
         $obj->created_at  = date('c');
         $obj->transport   = 'macrodroid';
-        $obj->client_uuid = '';
+        $obj->client_uuid = $clientUuid;
         $obj->save();
 
         $this->core->debugLog('SMS queued for MacroDroid', ['id' => $id, 'to' => $phone]);
@@ -303,7 +305,7 @@ class Sms
             }
 
             $message = $this->buildRappelMessage($firstName, $heure);
-            $result  = $this->send($phone, $message);
+            $result  = $this->send($phone, $message, $clientUuid);
 
             if ($result['ok']) {
                 // Mark sent
