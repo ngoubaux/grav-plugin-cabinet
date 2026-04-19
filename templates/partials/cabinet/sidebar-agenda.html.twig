@@ -1,5 +1,4 @@
 <div id="sidebar_agenda_body" x-show="view==='agenda'"
-     style="display:flex;flex-direction:column;flex:1;min-height:0"
      x-data="cabinetAgenda">
 
   <div class="cal-header">
@@ -21,11 +20,9 @@
     </template>
   </div>
 
-  <div style="border-top:0.5px solid #e2e2e2;padding:10px 16px 4px;font-size:11px;font-weight:500;color:#666;text-transform:uppercase;letter-spacing:.5px">
-    Séances du mois
-  </div>
+  <div class="agenda-section-header">Séances du mois</div>
 
-  <div class="agenda-list" style="overflow-y:auto;flex:1">
+  <div class="agenda-list">
     <div x-show="monthGroups.length === 0" class="agenda-empty">Aucune séance ce mois-ci</div>
     <template x-for="group in monthGroups" :key="group.dateStr">
       <div class="agenda-group" :id="'date_' + group.dateStr">

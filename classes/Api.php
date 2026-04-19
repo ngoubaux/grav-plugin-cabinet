@@ -55,7 +55,7 @@ class Api
             $this->serveAsset('cabinet.css', 'text/css');
         }
 
-        if (preg_match('#^/cabinet/([\w\-]+\.js)$#', $path, $m)) {
+        if (preg_match('#^/cabinet/([\w\-]+(?:/[\w\-]+)*\.js)$#', $path, $m)) {
             $this->serveAsset($m[1], 'application/javascript');
         }
 

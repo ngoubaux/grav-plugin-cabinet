@@ -1,4 +1,4 @@
-const CACHE = 'cabinet-v2';
+const CACHE = 'cabinet-v3';
 const ASSETS = ['/cabinet', '/cabinet/manifest.json'];
 
 self.addEventListener('install', e => {

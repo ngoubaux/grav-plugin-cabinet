@@ -1,7 +1,7 @@
 <div x-show="$store.cab.activeTab==='seances'" x-data="cabinetSeances">
 
   <div class="sessions-head">
-    <div class="section-label" style="margin:0">Historique des séances</div>
+    <div class="section-label">Historique des séances</div>
     <button class="btn-add" @click="$store.cab.openModal('session', null)">+ Séance</button>
   </div>
 
@@ -20,11 +20,11 @@
           <div class="client-meta"
                x-text="(s.status || 'scheduled') + ' · ' + (s.appointment_type || 'shiatsu_futon')"></div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
+        <div class="session-card-actions">
           <a class="gcal-link" x-show="s.google_event_link"
              :href="s.google_event_link" target="_blank" rel="noopener"
              @click.stop title="Ouvrir dans Google Calendar">Cal</a>
-          <button class="btn-ghost" style="font-size:12px;padding:4px 8px"
+          <button class="btn-ghost btn-sm"
                   @click.stop="$store.cab.openModal('session', s)">&#9998;</button>
           <button class="delete-btn"
                   @click.stop="$store.cab.deleteSession(s.id)">&#10005;</button>

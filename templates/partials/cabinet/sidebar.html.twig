@@ -1,5 +1,5 @@
 <div class="sidebar" x-data="cabinetSidebar"
-     @set-sidebar-view.window="setView($event.detail)">
+  @set-sidebar-view.window="setView($event.detail)">
 
   <div class="sidebar-nav">
     <div class="snav" :class="{active: view==='clients'}" @click="setView('clients')">Clients</div>
@@ -47,11 +47,11 @@
   {# ── Drive bar ── #}
   <div class="drive-bar" x-data="cabinetDriveBar">
     <div class="drive-status">
-      <div class="drive-dot" :class="$store.cab.driveStatus.state"></div>
-      <span x-text="$store.cab.driveStatus.label"></span>
+      <div class="drive-dot" :class="statusState"></div>
+      <span x-text="statusLabel"></span>
       <button class="btn-drive" @click="toggleDrive()"
-              x-text="$store.cab.driveConnected ? 'Déconnecter Drive' : 'Connecter Drive'"></button>
-      <button class="btn-verif" x-show="$store.cab.driveConnected" @click="openVerif()">Vérifier</button>
+              x-text="connected ? 'Déconnecter Drive' : 'Connecter Drive'"></button>
+      <button class="btn-verif" x-show="connected" @click="openVerif()">Vérifier</button>
     </div>
   </div>
 

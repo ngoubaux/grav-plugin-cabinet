@@ -12,7 +12,7 @@
       <div class="bilan-pdf-header">
         <span class="section-label" style="margin:0">Bilan tablette</span>
         <a :href="'https://drive.google.com/file/d/' + $store.cab.bilanFile?.fileId + '/view'"
-           target="_blank" class="btn-ghost" style="font-size:11px;padding:4px 10px">
+           target="_blank" class="btn-ghost btn-sm">
           Ouvrir dans Drive &#8599;
         </a>
       </div>
@@ -37,9 +37,9 @@
   </div>
 
   {# ── Évolution énergétique ── #}
-  <div class="evolution-header" style="margin-top:20px">
+  <div class="evolution-header">
     <div class="section-label" style="margin:0">Évolution énergétique</div>
-    <div class="internal-badge" style="margin:0">Usage interne uniquement</div>
+          <div class="internal-badge badge-inline">Usage interne uniquement</div>
   </div>
 
   <div x-show="sessionsWithBilan.length === 0" class="no-sessions">
@@ -61,17 +61,15 @@
             <template x-for="m in activeMeridians(s.bilan)" :key="m.id">
               <span class="energie-chip" :class="stateClass(m.state)" :title="m.name">
                 <span x-text="m.id + ' '"></span>
-                <span style="font-weight:500" x-text="m.name"></span>
+                <span class="chip-name" x-text="m.name"></span>
               </span>
             </template>
           </div>
-          <div x-show="s.bilan?.element_dominant"
-               style="font-size:11px;color:var(--cab-text-sec);margin-bottom:4px">
+          <div x-show="s.bilan?.element_dominant" class="timeline-element">
             Élément : <strong x-text="s.bilan?.element_dominant"></strong>
           </div>
           <div class="timeline-synth" x-show="s.bilan?.synthese_mtc" x-text="s.bilan?.synthese_mtc"></div>
-          <div x-show="s.bilan?.evolution"
-               style="font-size:12px;color:var(--cab-text-sec);margin-top:6px;font-style:italic"
+          <div x-show="s.bilan?.evolution" class="timeline-evolution"
                x-text="s.bilan?.evolution"></div>
         </div>
       </template>
