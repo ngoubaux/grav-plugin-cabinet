@@ -50,7 +50,7 @@ log "Récupération de la file d'attente : $CABINET_URL/api/cabinet/sms/queue"
 
 queue_response=$(curl -sf \
     --max-time "$CURL_TIMEOUT" \
-    -H "Authorization: Bearer $API_KEY" \
+    -H "X-Api-Key: $API_KEY" \
     -H "Accept: application/json" \
     "$CABINET_URL/api/cabinet/sms/queue")
 
@@ -105,7 +105,7 @@ while IFS= read -r item; do
         ack_response=$(curl -sf \
             --max-time "$CURL_TIMEOUT" \
             -X POST \
-            -H "Authorization: Bearer $API_KEY" \
+            -H "X-Api-Key: $API_KEY" \
             -H "Content-Type: application/json" \
             "$CABINET_URL/api/cabinet/sms/queue/$id/ack")
 
