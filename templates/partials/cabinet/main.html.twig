@@ -1,12 +1,14 @@
 <div class="main" id="mainArea" x-data="cabinetMain">
 
-  <div class="empty-state" x-show="!$store.cab.activeId">
+  {% include 'partials/cabinet/tab-aide.html.twig' %}
+
+  <div class="empty-state" x-show="!$store.cab.activeId && !$store.cab.showHelp">
     <div style="width:40px;height:40px;border-radius:50%;background:var(--cab-surface);display:flex;align-items:center;justify-content:center;font-size:18px">&#128100;</div>
     <span style="font-size:13px">Sélectionnez un client</span>
     <span style="font-size:12px;color:var(--cab-text-sec)">ou créez un nouveau dossier</span>
   </div>
 
-  <template x-if="$store.cab.activeId">
+  <template x-if="$store.cab.activeId && !$store.cab.showHelp">
     <div class="main-content">
 
       <div class="main-tabs">

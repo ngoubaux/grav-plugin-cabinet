@@ -2,8 +2,12 @@
   @set-sidebar-view.window="setView($event.detail)">
 
   <div class="sidebar-nav">
-    <div class="snav" :class="{active: view==='clients'}" @click="setView('clients')">Clients</div>
-    <div class="snav" :class="{active: view==='agenda'}"  @click="setView('agenda')">Agenda</div>
+    <div class="snav" :class="{active: view==='clients' && !$store.cab.showHelp}"
+         @click="$store.cab.showHelp=false; setView('clients')">Clients</div>
+    <div class="snav" :class="{active: view==='agenda' && !$store.cab.showHelp}"
+         @click="$store.cab.showHelp=false; setView('agenda')">Agenda</div>
+    <div class="snav" :class="{active: $store.cab.showHelp}"
+         @click="$store.cab.showHelp=!$store.cab.showHelp">Aide</div>
   </div>
 
   {# ── Clients ── #}
