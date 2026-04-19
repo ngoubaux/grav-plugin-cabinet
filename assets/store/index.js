@@ -89,7 +89,6 @@ const cabStore = {
     this.activeTab='fiche';
     this.bilanFile=undefined;
     delete _bilanFileCache[resolved];
-    this.renderList();
     document.getElementById('app')?.classList.toggle('client-open',true);
     window.dispatchEvent(new CustomEvent('cabinet:client-selected',{detail:resolved}));
   },
@@ -97,7 +96,6 @@ const cabStore = {
   goBack() {
     this.activeId=null;
     document.getElementById('app')?.classList.remove('client-open');
-    this.renderList();
   },
 
   setTab(tab) {

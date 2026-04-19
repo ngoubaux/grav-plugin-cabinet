@@ -1,14 +1,7 @@
 /* Cabinet — Drive bar & main area components */
 
 function cabinetMain() {
-  return {
-    refreshOn: true,
-
-    forceRefresh() {
-      this.refreshOn = false;
-      this.$nextTick(() => { this.refreshOn = true; });
-    },
-  };
+  return {};
 }
 
 function cabinetDriveBar() {
