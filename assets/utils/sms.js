@@ -16,7 +16,7 @@ function getPreferredSession(sessionList) {
     return at-bt;
   });
   const now=Date.now();
-  return list.find(s=>{const dt=parseSessionDateTime(s);return dt&&dt.getTime()>=now;}) || list[0] || null;
+  return list.find(s=>{const dt=parseSessionDateTime(s);return dt&&dt.getTime()>=now;}) || null;
 }
 
 function formatDurationForSms(minutes) {
@@ -42,21 +42,16 @@ function getPreparationVisitLink(client, clientId) {
     : 'https://www.goubs.net/preparons-votre-visite/';
 }
 
-function buildPreparationSms(client, sessionList, clientId) {
-  const name=client ? `${String(client.first_name||'').trim()} ${String(client.last_name||'').trim()}`.trim() : '';
-  const greeting=name ? `Bonjour ${name},` : 'Bonjour,';
+function buildPreparationSms(client, sessionList, clientId, template='') {
+  const source=String(template||'').trim();
+  if(!source) return '';
+  const firstName=client ? String(client.first_name||'').trim() : '';
   const session=client ? getPreferredSession(sessionList) : null;
-  const sessionLabel=formatSessionSlotForSms(session);
-  const durationLabel=session ? formatDurationForSms(session.duree) : '1h15';
-  const link=getPreparationVisitLink(client, clientId);
-  return `${greeting}
-
-Afin de préparer notre première séance${sessionLabel ? ` de ${sessionLabel}` : ''}.
-Je vous partage ce lien: ${link}
-
-📍 60 chemin du Val Fleuri 🔐 Code portillon : 2507A 🏢 Bât B6 appt 08, 3ème étage, porte de gauche (à droite de la piscine)
-⏱️ Durée : ${durationLabel} - Tarif : 75€ 👕 Tenue : vêtements souples, chaussettes propres
-
-À bientôt, Nicolas
-Le shiatsu est une approche d'accompagnement au bien-être qui ne se substitue pas à un traitement médical.`;
+  const vars={
+    first_name:firstName,
+    session_slot: session ? ` de ${formatSessionSlotForSms(session)}` : '',
+    preparation_link:getPreparationVisitLink(client, clientId),
+    duration:session ? formatDurationForSms(session.duree) : '1h15',
+  };
+  return source.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g,(_m,key)=>String(vars[key]??''));
 }

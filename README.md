@@ -1,8 +1,6 @@
 # Cabinet — Plugin Grav
 
-Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), construit sur [Grav CMS](https://getgrav.org). Il centralise les dossiers clients, les rendez-vous, les bilans PDF et les rappels SMS dans une interface mobile-first accessible depuis n'importe quel appareil.
-
-![Vue desktop — fiche client](assets/screenshots/desktop-client-fiche.png)
+Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), construit sur [Grav CMS](https://getgrav.org). Il centralise les dossiers clients, les rendez-vous, les communications, les bilans PDF et les rappels SMS dans une interface Alpine.js mobile-first accessible depuis n'importe quel appareil.
 
 ---
 
@@ -14,13 +12,14 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 4. [Configuration](#configuration)
 5. [Mise en place d'une page Cabinet](#mise-en-place-dune-page-cabinet)
 6. [Fonctionnement de l'interface](#fonctionnement-de-linterface)
-7. [Intégration Google (OAuth, Drive, Agenda)](#intégration-google)
-8. [SMS — SMSMobileAPI](#sms--smsmobileapi)
-9. [Synchronisation Resalib (Google Apps Script)](#synchronisation-resalib)
-10. [API REST](#api-rest)
-11. [Scheduler Grav — Rappels automatiques](#scheduler-grav)
-12. [Structure des fichiers](#structure-des-fichiers)
-13. [Logs et débogage](#logs-et-débogage)
+7. [Module Communication](#module-communication)
+8. [Intégration Google (OAuth, Drive, Agenda)](#intégration-google)
+9. [SMS — Multi-provider](#sms--multi-provider)
+10. [Synchronisation Resalib (Google Apps Script)](#synchronisation-resalib)
+11. [API REST](#api-rest)
+12. [Scheduler Grav — Rappels automatiques](#scheduler-grav)
+13. [Structure des fichiers](#structure-des-fichiers)
+14. [Logs et débogage](#logs-et-débogage)
 
 ---
 
@@ -30,12 +29,14 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 |--------|-------------|
 | **Clients** | Dossiers clients stockés via Flex Objects (prénom, nom, DDN, téléphone, email, motif, antécédents, notes) |
 | **Rendez-vous** | CRUD complet des séances (date, heure, durée, type, statut, observations, exercices) |
-| **Agenda** | Vue calendrier par jour, triée par heure, avec synchronisation Google Calendar |
+| **Agenda** | Vue calendrier mensuelle avec mini-calendrier + liste, synchronisation Google Calendar |
+| **Communication** | Module dédié : historique des échanges SMS/email, envoi et suggestions de templates par client |
 | **Bilan PDF** | Visualisation et upload des bilans Boox (NoteAir) depuis Google Drive |
 | **Facturation** | Récapitulatif des séances réalisées par client |
-| **SMS** | Envoi manuel du SMS de préparation de visite + rappels automatiques J-1 via SMSMobileAPI |
+| **SMS** | Envoi direct du SMS de préparation via fournisseur configurable (SMSMobileAPI ou Simple SMS Gateway) + fallback local confirmé + rappels automatiques J-1 |
 | **Resalib Sync** | Script Google Apps Script pour synchroniser les RDV Resalib → Cabinet |
 | **API REST** | Endpoints JSON sécurisés (session Grav ou clé API) pour intégration avec Make.com ou scripts tiers |
+| **Menu Admin** | Entrée « Cabinet » dans la navigation Grav Admin (accès rapide `fa-briefcase`) |
 
 ---
 
@@ -45,7 +46,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 - Plugin **Login** (authentification Grav)
 - Plugin **Flex Objects** (stockage des données)
 - PHP ≥ 7.4
-- Accès HTTPS recommandé (requis pour Google OAuth et Service Worker PWA)
+- Accès HTTPS recommandé (requis pour Google OAuth, Service Worker PWA et Clipboard API)
 
 ---
 
@@ -61,7 +62,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
    rm -rf cache/*
    ```
 
-3. Activer le plugin dans l'administration Grav :  
+3. Activer le plugin dans l'administration Grav :
    **Plugins → Cabinet → Activer**
 
    Ou directement dans `user/plugins/cabinet/cabinet.yaml` :
@@ -89,96 +90,175 @@ allowed_origin: '*'
 # Google OAuth 2.0
 google_oauth_client_id: ''      # ex: xxxx.apps.googleusercontent.com
 google_calendar_id: ''          # ex: xxxx@group.calendar.google.com
-drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'  # Chemin Drive des bilans
+drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'
 
-# SMS — SMSMobileAPI
-sms_enabled: false              # Active les rappels automatiques J-1
-sms_api_key: ''                 # Clé API SMSMobileAPI
-sms_rappel_cron: '0 8 * * *'   # Expression cron (ici : tous les jours à 8h00)
+# SMS — Multi-provider
+sms_enabled: false
+sms_api_key: ''
+sms_provider: 'smsmobileapi'
+sms_simple_gateway_url: ''
+sms_simple_gateway_token: ''
+sms_http_gateway_url: ''
+sms_http_gateway_token: ''
+sms_rappel_cron: '0 8 * * *'   # tous les jours à 8h00
+
+# Communication
+communication_google_review_url: ''    # ex: https://g.page/r/XXXX/review
+communication_template_prep_visite: '' # voir section Communication
+communication_template_relance: ''
+communication_template_compte_rendu: ''
 ```
 
 ### Paramètres détaillés
 
 | Paramètre | Description |
 |-----------|-------------|
-| `api_key` | Clé secrète envoyée dans l'en-tête HTTP `X-Api-Key` par les scripts externes. Changer impérativement avant mise en production. |
-| `allowed_origin` | En-tête CORS `Access-Control-Allow-Origin`. Utiliser `*` ou l'URL exacte du site. |
-| `google_oauth_client_id` | Client ID OAuth 2.0 créé dans Google Cloud Console (voir [section Google](#intégration-google)). |
-| `google_calendar_id` | Identifiant du calendrier Google à synchroniser avec l'agenda Cabinet. |
-| `drive_bilan_path` | Chemin du dossier sur Google Drive contenant les sous-dossiers clients avec leurs bilans PDF. Séparateur `/`, sans slash en début ou fin. Exemple : `onyx/NoteAir5c/Cahiers/clients`. |
-| `sms_enabled` | Active l'envoi automatique des rappels SMS la veille des rendez-vous via le scheduler Grav. |
-| `sms_api_key` | Clé API SMSMobileAPI (voir [section SMS](#sms--smsmobileapi)). |
-| `sms_rappel_cron` | Expression cron définissant l'heure d'envoi des rappels. |
+| `api_key` | Clé secrète envoyée dans `X-Api-Key`. Changer avant mise en production. |
+| `allowed_origin` | En-tête CORS `Access-Control-Allow-Origin`. |
+| `google_oauth_client_id` | Client ID OAuth 2.0 Google Cloud Console. |
+| `google_calendar_id` | Identifiant du calendrier Google à synchroniser. |
+| `drive_bilan_path` | Chemin Drive des bilans PDF. Séparateur `/`, sans slash en début/fin. |
+| `sms_enabled` | Active l'envoi automatique des rappels J-1 via le scheduler Grav. |
+| `sms_api_key` | Clé API SMSMobileAPI (requise si `sms_provider: smsmobileapi`). |
+| `sms_provider` | Fournisseur SMS utilisé : `smsmobileapi` ou `simple_sms_gateway`. |
+| `sms_simple_gateway_url` | Endpoint HTTP de la passerelle Android (payload JSON `phone` + `message`). |
+| `sms_simple_gateway_token` | Token Bearer optionnel pour la passerelle Simple SMS Gateway. |
+| `sms_http_gateway_url` | Clé legacy, encore lue en fallback si `sms_simple_gateway_url` est vide. |
+| `sms_http_gateway_token` | Clé legacy, encore lue en fallback si `sms_simple_gateway_token` est vide. |
+| `sms_rappel_cron` | Expression cron pour l'heure d'envoi des rappels. |
+| `communication_google_review_url` | URL fiche Google Business, utilisée dans les templates de compte-rendu. |
+| `communication_template_prep_visite` | Template SMS de préparation visite (voir variables ci-dessous). |
+| `communication_template_relance` | Template SMS de relance. |
+| `communication_template_compte_rendu` | Template email de compte-rendu. |
 
 ---
 
 ## Mise en place d'une page Cabinet
 
 1. Dans l'administration Grav, créer une nouvelle page.
-2. Choisir le template **Cabinet** dans la liste des types de page.
-3. Dans les options avancées, activer l'accès réservé aux membres connectés :  
-   **Accès → site → login → Oui**
-4. Définir le slug de la page : `/cabinet` (le plugin intercepte ce chemin).
+2. Choisir le template **Cabinet**.
+3. Activer l'accès réservé aux membres connectés : **Accès → site → login → Oui**.
+4. Définir le slug de la page : `/cabinet`.
 
-L'interface applicative est une SPA (Single Page Application) chargée dans cette page.
+L'interface est une SPA Alpine.js chargée dans cette page. L'entrée **Cabinet** apparaît automatiquement dans le menu de l'administration Grav.
 
 ---
 
 ## Fonctionnement de l'interface
 
-### Onglet Clients (sidebar gauche)
+### Sidebar — Clients / Agenda
 
-- **Liste des clients** triée alphabétiquement avec compteur de séances.
-- **Nouveau client** : bouton `+` en haut de liste.
-- **Recherche** : champ de filtre en temps réel.
+La sidebar gauche dispose de deux vues :
+
+- **Clients** : liste alphabétique avec compteur de séances, champ de recherche, bouton `+`.
+- **Agenda** : mini-calendrier mensuel (pip sur les jours avec séances) + liste des séances du mois, navigation mois par mois.
+
+Un clic sur une entrée de l'agenda ouvre directement la fiche du client concerné.
 
 ### Fiche client (onglet Fiche)
 
-- Formulaire d'identité : prénom, nom, date de naissance, téléphone, email.
+Stats en haut de fiche (4 cards) :
+
+| Card | Contenu |
+|------|---------|
+| 📋 Séances | Nombre total |
+| 🕐 Dernière séance | Date formatée (ex : `3 avr.`) |
+| 📅 Prochaine séance | Prochaine séance **future** — date + heure (ex : `jeu. 24 avr. · 10:00`), mise en évidence en couleur |
+| 🗂️ Dossier créé | Date de création du dossier |
+
+Formulaire :
+- Identité : prénom, nom, date de naissance, téléphone, email.
 - Motif de consultation, antécédents, notes internes.
-- Section **Lien Grav** : lie le client à un contact Grav existant (recherche par email ou nom).
-- **SMS préparation visite** : textarea pré-rempli avec un message personnalisé, boutons *Envoyer SMS* et *Copier*.
+- **Lien Grav** : lie le client à un contact Grav (recherche par email ou nom).
+- **SMS préparation visite** : envoi depuis l'onglet **Communication** avec message généré à partir du template admin.
 
 ### Séances (onglet Séances)
 
-![Vue desktop — séances et bilan énergétique](assets/screenshots/desktop-seances-bilan.png)
-
-- Liste de toutes les séances du client, dans l'ordre chronologique inverse.
-- Bouton **Nouvelle séance** pour créer un rendez-vous.
-
-  ![Modal nouvelle séance](assets/screenshots/modal-new-session.png)
-
-- Chaque séance est éditable : date, heure, durée, type, statut, motif, observations, exercices, prochaine séance, bilan énergétique.
+- Liste des séances dans l'ordre chronologique inverse.
+- Bouton **Nouvelle séance** → modal de création.
+- Chaque séance : date, heure, durée, type, statut, motif, observations, exercices, prochaine séance, bilan énergétique MTC.
 - Option **Désactiver le rappel SMS J-1** par séance.
-- Synchronisation Google Calendar : crée/met à jour l'événement dans l'agenda configuré.
+- Synchronisation Google Calendar : création/mise à jour de l'événement dans l'agenda configuré.
 
 ### Bilan (onglet Bilan)
 
-- Affiche le PDF du bilan Boox (tablette NoteAir) stocké sur Google Drive.
-- Chemin attendu sur Drive : `onyx/NoteAir5c/Cahiers/clients/<prénom> <nom>/<fichier>.pdf`
-- Si aucun bilan n'est trouvé, bouton **Envoyer la fiche vierge sur Drive** (upload du template PDF depuis `assets/Fiche Client - Shiatsu.pdf`).
-- Visionneuse PDF intégrée (iframe, sans téléchargement).
+- Affiche le PDF du bilan Boox stocké sur Google Drive.
+- Si absent, bouton **Envoyer la fiche vierge sur Drive**.
 
-### Agenda (sidebar droite / vue agenda)
+### Communication (onglet Communication)
 
-![Vue desktop — agenda](assets/screenshots/desktop-agenda.png)
+Voir [section dédiée](#module-communication).
 
-- Rendez-vous regroupés par jour, triés par heure.
-- Synchronisation avec Google Calendar pour voir les événements en temps réel.
+---
 
-### Vue mobile
+## Module Communication
 
-Sur écran étroit, l'interface passe en vue pleine largeur : la sidebar s'affiche en premier, puis la fiche client s'ouvre au tap avec un bouton retour.
+L'onglet **Communication** de chaque fiche client offre un historique complet des échanges et des outils d'envoi.
 
-| Liste des clients | Fiche client |
-|---|---|
-| ![Mobile — liste clients](assets/screenshots/mobile-sidebar.png) | ![Mobile — fiche client](assets/screenshots/mobile-client.png) |
+### Fonctionnalités
 
-### Vérification globale
+- **Historique** des communications (SMS et email) par client, persisté côté serveur dans une collection Flex Objects dédiée (`communications`).
+- **Filtres** : Tous / SMS / Email.
+- **Rédaction** : zone de texte + objet (email), sélection du canal, date de suivi optionnelle.
+- **Suggestions de templates** :
 
-- Bouton **Vérifier** (icône loupe) dans la barre de navigation.
-- Lance un audit de tous les clients : présence du bilan Drive + cohérence de l'agenda Google Calendar.
-- Affiche un log en direct avec indicateurs ✓ / ⚠.
+| Template | Canal | Description |
+|----------|-------|-------------|
+| Préparation visite | SMS | Message personnalisé avec lien de préparation |
+| Relance | SMS | Message de relance après une séance |
+| Compte-rendu | Email | Résumé de séance avec invitation avis Google |
+
+- **Envoi SMS** via le fournisseur configuré (SMSMobileAPI ou Simple SMS Gateway).
+- **Copie** du message dans le presse-papier.
+
+### Nouveau flux SMS de préparation (2026)
+
+- Envoi prioritaire via l'endpoint API `POST /api/cabinet/sms/send-preparation`.
+- Message construit uniquement depuis `communication_template_prep_visite` (plus de message par défaut codé en dur).
+- Routage serveur selon `sms_provider` (`smsmobileapi` ou `simple_sms_gateway`).
+- Si l'envoi API échoue (ou est désactivé), l'interface propose explicitement d'ouvrir l'app SMS locale.
+- En cas de refus utilisateur, l'action est enregistrée avec le statut `cancelled`.
+
+### Templates admin configurables
+
+Les templates sont configurables dans **Plugins → Cabinet → Communication**.
+
+#### Variables disponibles
+
+| Variable | Description |
+|----------|-------------|
+| `{{first_name}}` | Prénom du client |
+| `{{session_slot}}` | Créneau formaté en français — ex : ` de lundi 28 avril à 10:00` (vide si aucune séance future) |
+| `{{preparation_link}}` | URL `preparons-votre-visite/id:xxx` personnalisée par client |
+| `{{duration}}` | Durée formatée — ex : `1h15` |
+| `{{session_date}}` | Date ISO de la dernière séance |
+| `{{session_date_label}}` | Libellé de date — ex : ` du 28 avril 2025` |
+| `{{google_review_url}}` | URL fiche Google Business (configurée dans les paramètres) |
+
+#### Template par défaut — Préparation visite
+
+```
+Bonjour {{first_name}},
+
+Afin de préparer notre première séance{{session_slot}}.
+Je vous partage ce lien : {{preparation_link}}
+
+📍 60 chemin du Val Fleuri 🔐 Code portillon : 2507A 🏢 Bât B6 appt 08, 3ème étage, porte de gauche (à droite de la piscine)
+⏱️ Durée : {{duration}} - Tarif : 75€ 👕 Tenue : vêtements souples, chaussettes propres
+
+À bientôt, Nicolas
+Le shiatsu est une approche d'accompagnement au bien-être qui ne se substitue pas à un traitement médical.
+```
+
+### Architecture technique — objet Communication
+
+Les communications sont stockées dans une collection Flex Objects **dédiée** (`user/data/flex-objects/communications.json`), indépendante de l'objet client. Ce choix permet :
+
+- l'historique multi-appareil sans duplication dans le dossier client ;
+- la suppression propre à la suppression d'un client ;
+- une évolution future vers des communications multi-clients.
+
+La classe `classes/Communication.php` gère l'intégralité de cette logique (lecture, écriture, suppression).
 
 ---
 
@@ -186,251 +266,174 @@ Sur écran étroit, l'interface passe en vue pleine largeur : la sidebar s'affic
 
 ### Créer un Client OAuth 2.0
 
-1. Aller sur [Google Cloud Console](https://console.cloud.google.com/).
-2. Créer un projet (ou sélectionner un projet existant).
-3. Activer les APIs :
-   - **Google Drive API**
-   - **Google Calendar API**
-4. Aller dans **APIs & Services → Identifiants → Créer des identifiants → ID client OAuth 2.0**.
-5. Type d'application : **Application Web**.
-6. Ajouter l'URL du site dans **Origines JavaScript autorisées** (ex: `https://monsite.com`).
-7. Copier le **Client ID** et le coller dans la configuration du plugin (`google_oauth_client_id`).
+1. [Google Cloud Console](https://console.cloud.google.com/) → projet → activer **Drive API** + **Calendar API**.
+2. **APIs & Services → Identifiants → Créer → ID client OAuth 2.0** (type : Application Web).
+3. Ajouter l'URL du site dans **Origines JavaScript autorisées**.
+4. Copier le **Client ID** dans la configuration (`google_oauth_client_id`).
 
 ### Flux d'authentification
 
-L'authentification utilise **Google Identity Services (GIS)** en flux implicite côté client. Le token d'accès est stocké en `sessionStorage` avec vérification d'expiration. En cas d'expiration, une ré-authentification silencieuse est tentée automatiquement.
+Utilise **Google Identity Services (GIS)** en flux implicite côté client. Le token d'accès est stocké en `sessionStorage` avec vérification d'expiration et ré-authentification silencieuse automatique.
 
 Scopes demandés :
-- `https://www.googleapis.com/auth/drive.file` — lecture/écriture des fichiers créés par l'app
-- `https://www.googleapis.com/auth/drive.readonly` — lecture des bilans Boox
-- `https://www.googleapis.com/auth/documents` — (réservé)
-- `https://www.googleapis.com/auth/calendar.events` — lecture/écriture des événements Calendar
+- `drive.file` — lecture/écriture des fichiers créés par l'app
+- `drive.readonly` — lecture des bilans Boox
+- `documents` — création de docs Google Docs (anamnèse, bilan)
+- `calendar.events` — lecture/écriture des événements Calendar
 
 ### Structure des bilans sur Google Drive
 
-Le paramètre `drive_bilan_path` doit correspondre au chemin exact du **dossier racine** de vos bilans sur Google Drive (séparateur `/`, sans slash en début ou fin). À adapter selon votre propre organisation Drive.
-
-```yaml
-# Exemples
-drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'   # tablette Boox NoteAir
-drive_bilan_path: 'Documents/Shiatsu/bilans'          # autre structure
-```
-
-À l'intérieur de ce dossier racine, chaque client doit avoir un sous-dossier dont le nom correspond à **Prénom NOM** (insensible à la casse) :
+Le paramètre `drive_bilan_path` définit le dossier racine. Chaque client doit avoir un sous-dossier nommé **Prénom NOM** :
 
 ```
 Mon Drive/
-└── <drive_bilan_path>/            ← valeur du paramètre
-    ├── Anne DUPONT/               ← sous-dossier = "Prénom NOM" du client
-    │   └── bilan-2024-03.pdf
+└── onyx/NoteAir5c/Cahiers/clients/
+    ├── Anne DUPONT/
+    │   └── bilan-2025-03.pdf
     └── Jean MARTIN/
-        └── bilan-energetique.pdf
+        └── bilan.pdf
 ```
 
-### Tablette Boox Note Air 5C — prise de notes sur les bilans
+### Tablette Boox Note Air 5C
 
-Le flux recommandé pour annoter les bilans directement sur la tablette :
-
-#### 1. Lier Google Drive à la bibliothèque Boox
-
-Sur la tablette :
-
-> Paramètres → Comptes → Accéder au stockage cloud dans la bibliothèque → Synchroniser avec Google Drive → Se connecter
-
-Une fois le compte Google lié, les fichiers Google Drive sont accessibles depuis l'application **Bibliothèque** de la tablette.
-
-#### 2. Télécharger et annoter le PDF
-
-1. Depuis l'onglet **Bilan** du plugin, cliquer sur **Envoyer la fiche vierge sur Drive** si aucun bilan n'existe encore pour ce client. Le PDF template est déposé dans `<drive_bilan_path>/Prénom NOM/`.
-2. Sur la tablette, ouvrir la **Bibliothèque → Google Drive** et naviguer jusqu'au dossier du client.
-3. Télécharger et ouvrir le PDF.
-4. Prendre les notes directement sur le PDF (stylet).
-5. En quittant le PDF, la tablette synchronise automatiquement le fichier annoté vers Google Drive.
-
-#### 3. Consulter le bilan depuis le plugin
-
-De retour dans l'interface Cabinet, l'onglet **Bilan** affiche le PDF annoté via une visionneuse intégrée (les annotations Boox sont intégrées au PDF, aucune conversion nécessaire).
-
-> **Note :** la synchronisation Boox → Drive se déclenche à la fermeture du document. Si le bilan n'apparaît pas immédiatement, patienter quelques secondes et rafraîchir l'onglet Bilan.
-
----
+1. Lier Google Drive dans la bibliothèque Boox : *Paramètres → Comptes → Stockage cloud → Google Drive*.
+2. Depuis l'onglet **Bilan**, cliquer **Envoyer la fiche vierge sur Drive** (si aucun bilan).
+3. Sur la tablette, ouvrir le PDF, annoter avec le stylet.
+4. À la fermeture, la tablette synchronise automatiquement vers Drive.
+5. Rafraîchir l'onglet Bilan dans Cabinet.
 
 ### Google Calendar
 
-Renseigner l'identifiant du calendrier dans la configuration (`google_calendar_id`). Il est visible dans les paramètres du calendrier Google → **Adresse de l'agenda**.
-
-Format : `xxxxxxxx@group.calendar.google.com`
+Renseigner `google_calendar_id` (visible dans les paramètres du calendrier → *Adresse de l'agenda*).
 
 ---
 
-## SMS — SMSMobileAPI
+## SMS — Multi-provider
 
-### Compte SMSMobileAPI
+### Fournisseurs supportés
+
+- `smsmobileapi` : envoi via API cloud SMSMobileAPI (requiert `sms_api_key`).
+- `simple_sms_gateway` : envoi via endpoint HTTP de votre telephone Android proxy (requiert `sms_simple_gateway_url`).
+- Compatibilité legacy : les clés `sms_http_gateway_url` et `sms_http_gateway_token` restent supportées en fallback serveur.
+
+### Configuration du provider
+
+Exemple SMSMobileAPI :
+
+```yaml
+sms_enabled: true
+sms_provider: 'smsmobileapi'
+sms_api_key: 'votre-cle-api'
+```
+
+Exemple Simple SMS Gateway :
+
+```yaml
+sms_enabled: true
+sms_provider: 'simple_sms_gateway'
+sms_simple_gateway_url: 'https://votre-passerelle.example/send-sms'
+sms_simple_gateway_token: 'token-optionnel'
+```
+
+### Compte SMSMobileAPI (si provider = SMSMobileAPI)
 
 1. Créer un compte sur [app.smsmobileapi.com](https://app.smsmobileapi.com).
-2. Installer l'application SMSMobileAPI sur un smartphone Android connecté en permanence.
-3. Récupérer la clé API dans **Mon compte** et la coller dans la configuration (`sms_api_key`).
+2. Installer l'app Android sur un smartphone connecté en permanence.
+3. Copier la clé API dans `sms_api_key`.
 
-### Envoi manuel (SMS de préparation)
+### Envoi manuel
 
-Depuis la fiche client, onglet **Fiche** :
-1. Le message de préparation est affiché dans la zone SMS.
-2. Cliquer sur **Envoyer SMS** pour l'envoyer directement au numéro du client.
-3. Ou **Copier** pour le coller ailleurs.
+Depuis l'onglet **Communication** :
+- Le template de préparation est pré-rempli avec les données du client et de sa prochaine séance.
+- L'envoi tente d'abord le provider configuré côté serveur, puis propose un fallback local (application SMS) avec confirmation utilisateur.
+- Bouton *Copier* disponible pour le presse-papier.
 
-Le numéro de téléphone est normalisé automatiquement : `06XXXXXXXX` → `+336XXXXXXXX`.
+Le numéro est normalisé automatiquement : `06XXXXXXXX` → `+336XXXXXXXX`.
 
 ### Rappels automatiques J-1
 
-Lorsque `sms_enabled: true`, le scheduler Grav envoie automatiquement un rappel SMS la veille de chaque rendez-vous non annulé.
+Quand `sms_enabled: true`, le scheduler Grav envoie un rappel SMS la veille de chaque rendez-vous non annulé.
 
-Message envoyé :
-```
-Bonjour [Prénom],
-
-Rappel : vous avez une séance de shiatsu demain à [heure].
-
-📍 [adresse] 🔐 Code : XXXX 🏢 [détails]
-
-À demain, Nicolas
-```
-
-> Pour personnaliser ce message, modifier la méthode `buildRappelMessage()` dans `classes/Sms.php`.
+> Pour personnaliser le message de rappel, modifier `buildRappelMessage()` dans `classes/Sms.php`.
 
 ### Désactiver le rappel pour une séance
 
-Dans le formulaire d'édition d'une séance, cocher **Désactiver le rappel SMS J-1**. Ce paramètre est également visible et modifiable depuis l'administration Grav (Flex Objects → Rendez-vous).
+Dans le formulaire de séance, cocher **Désactiver le rappel SMS J-1**.
 
 ### Logique anti-doublon
 
-Le plugin enregistre la date d'envoi dans `sms_rappel_sent_date`. Un rappel ne peut être envoyé qu'une seule fois par jour et par rendez-vous.
+Le champ `sms_rappel_sent_date` empêche l'envoi de plus d'un rappel par jour et par rendez-vous.
 
 ---
 
 ## Synchronisation Resalib
 
-Le fichier `assets/resalib-sync.gs` est un **Google Apps Script** qui synchronise automatiquement les événements du calendrier Resalib vers le plugin Cabinet via l'API REST.
+Le fichier `assets/resalib-sync.gs` est un **Google Apps Script** qui synchronise les événements Resalib → Cabinet via l'API REST.
 
 ### Installation
 
-1. Aller sur [script.google.com](https://script.google.com) → **Nouveau projet**.
-2. Coller le contenu de `assets/resalib-sync.gs`.
-3. Dans le menu **Services**, ajouter **Google Calendar API**.
-4. Configurer la section `CONFIG` :
+1. [script.google.com](https://script.google.com) → Nouveau projet → coller `resalib-sync.gs`.
+2. Services → ajouter **Google Calendar API**.
+3. Configurer la section `CONFIG` :
 
 ```javascript
 const CONFIG = {
-  CALENDAR_ID:  'xxxx@group.calendar.google.com', // Calendrier Resalib
-  WEBHOOK_URL:  'https://script.google.com/macros/s/XXXX/exec', // URL du script déployé
+  CALENDAR_ID:      'xxxx@group.calendar.google.com',
   CABINET_BASE_URL: 'https://monsite.com',
   CABINET_API_KEY:  'votre-cle-api',
-  // ...
 };
 ```
 
-5. **Déployer** → Nouveau déploiement → Type : **Application web** → Accès : **Tout le monde**.
-6. Copier l'URL de déploiement dans `CONFIG.WEBHOOK_URL`.
-7. Exécuter **`setupAll()`** une seule fois depuis la console du script.
+4. Déployer → Application web → Accès : Tout le monde.
+5. Exécuter **`setupAll()`** une seule fois.
 
-### Fonctionnement
-
-- Google Calendar envoie une notification push (`POST`) au script à chaque modification.
-- Le script effectue une sync incrémentale et met à jour les rendez-vous Cabinet via l'API REST.
-- Un déclencheur de secours toutes les 15 minutes assure la résilience.
-- Le watch channel Google expire après 7 jours et est renouvelé automatiquement.
-
-### Fonctions utiles (console Apps Script)
+### Fonctions utiles
 
 | Fonction | Description |
 |----------|-------------|
-| `setupAll()` | Installation initiale (déclencheurs + watch + sync complète) |
+| `setupAll()` | Installation initiale |
 | `refreshCalendar()` | Sync complète forcée |
-| `inspectEventMap()` | Affiche la correspondance eventId → flex_id |
-| `inspectClientMap()` | Affiche la correspondance nom → UUID Cabinet |
-| `addClientMapping('Prénom NOM', 'uuid')` | Mapping manuel d'un client |
-| `forceSyncEvent('eventId')` | Force la sync d'un événement précis |
+| `inspectEventMap()` | Correspondance eventId → flex_id |
+| `addClientMapping('Prénom NOM', 'uuid')` | Mapping manuel |
 | `resetAll()` | Remet tout à zéro |
-
-### Résolution des clients
-
-Le script essaie de trouver le client Cabinet correspondant à un événement Resalib dans cet ordre :
-
-1. Par **email** (attendees Google Calendar)
-2. Par **nom extrait du titre** de l'événement Resalib (format : `"Prénom NOM | Resalib.fr"`)
-3. Via l'**API Cabinet** `/api/contacts/search`
-4. Si introuvable : utiliser `addClientMapping()` pour ajouter un mapping manuel
 
 ---
 
 ## API REST
 
-Toutes les routes retournent du JSON. L'authentification se fait soit par **session Grav** (utilisateur connecté), soit par **clé API** dans l'en-tête HTTP `X-Api-Key`.
+Authentification : **session Grav** ou en-tête `X-Api-Key`.
 
-### Routes publiques (session Grav uniquement)
+### Routes
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
-| `GET` | `/api/cabinet/data` | Données complètes (clients, séances, config) |
+| `GET` | `/api/cabinet/data` | Données complètes (clients, séances, communications, config) |
 | `GET` | `/api/cabinet/facturation` | Récapitulatif de facturation |
-| `POST` | `/api/cabinet/sms/preparation` | Envoyer le SMS de préparation |
-| `GET` | `/cabinet/bilan-template.pdf` | Télécharger le template PDF |
-
-### Routes session ou clé API
-
-| Méthode | Route | Description |
-|---------|-------|-------------|
 | `POST` | `/api/cabinet/clients` | Créer un client |
 | `PUT` | `/api/cabinet/clients/{id}` | Modifier un client |
-| `DELETE` | `/api/cabinet/clients/{id}` | Supprimer un client |
+| `DELETE` | `/api/cabinet/clients/{id}` | Supprimer un client (+ communications associées) |
 | `GET` | `/api/cabinet/rendezvous` | Lister tous les rendez-vous |
 | `POST` | `/api/cabinet/rendezvous` | Créer un rendez-vous |
 | `PUT` | `/api/cabinet/rendezvous/{flex_id}` | Modifier un rendez-vous |
 | `DELETE` | `/api/cabinet/rendezvous/{flex_id}` | Supprimer un rendez-vous |
-| `GET` | `/api/contacts/search?first_name=&last_name=` | Rechercher un client par nom |
+| `GET` | `/api/cabinet/communications/{client_id}` | Lister les communications d'un client |
+| `PUT` | `/api/cabinet/communications/{client_id}` | Mettre à jour les communications d'un client |
+| `POST` | `/api/cabinet/sms/send-preparation` | Envoyer le SMS de préparation via le provider SMS configuré (template admin + `client_id`) |
+| `POST` | `/api/cabinet/sms/preparation` | Préparer/valider un brouillon de SMS de préparation (template admin) |
 | `POST` | `/api/cabinet/sms/rappels` | Déclencher manuellement les rappels J-1 |
-
-### Exemple d'appel API (curl)
-
-```bash
-# Créer un rendez-vous depuis un script externe
-curl -X POST https://monsite.com/api/cabinet/rendezvous \
-  -H "X-Api-Key: votre-cle-api" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "client_id": "uuid-du-client",
-    "datetime": "2025-06-15T10:00",
-    "duree": 90,
-    "status": "scheduled",
-    "appointment_type": "shiatsu_futon",
-    "motif": "Douleurs dorsales"
-  }'
-```
+| `GET` | `/api/contacts/search` | Rechercher un client par nom/email |
+| `GET` | `/cabinet/bilan-template.pdf` | Télécharger le template PDF |
 
 ---
 
 ## Scheduler Grav
 
-Le plugin utilise le **scheduler intégré de Grav** pour les rappels SMS automatiques.
-
-### Activer le scheduler
-
-Ajouter la tâche cron suivante sur le serveur :
-
 ```bash
+# Ajouter au cron serveur
 * * * * * cd /chemin/vers/grav && php bin/grav scheduler 1>> /dev/null 2>&1
 ```
 
-Vérifier que le scheduler fonctionne dans l'administration : **Outils → Scheduler**.
-
-### Job enregistré
-
-| ID | Description | Déclencheur |
-|----|-------------|-------------|
-| `cabinet-sms-rappels` | Rappels SMS J-1 | Configurable via `sms_rappel_cron` |
-
-Le job n'est enregistré que si `sms_enabled: true` dans la configuration du plugin.
-
-Les logs d'exécution sont disponibles dans `logs/cabinet-sms-rappels.out`.
+Vérifier dans **Outils → Scheduler**. Le job `cabinet-sms-rappels` n'est enregistré que si `sms_enabled: true`.
 
 ---
 
@@ -438,66 +441,90 @@ Les logs d'exécution sont disponibles dans `logs/cabinet-sms-rappels.out`.
 
 ```
 user/plugins/cabinet/
-├── cabinet.php                          # Classe principale du plugin
-├── cabinet.yaml                         # Configuration par défaut
-├── blueprints.yaml                      # Définition du formulaire d'administration
+├── cabinet.php                       # Classe principale du plugin (DI, hooks, admin menu)
+├── cabinet.yaml                      # Configuration par défaut
+├── blueprints.yaml                   # Formulaire d'administration Grav
 │
 ├── assets/
-│   ├── cabinet.js                       # Application SPA (frontend)
-│   ├── cabinet.css                      # Styles
-│   ├── manifest.json                    # PWA manifest
-│   ├── sw.js                            # Service Worker (PWA)
-│   ├── Fiche Client - Shiatsu.pdf       # Template PDF bilan vierge
-│   └── resalib-sync.gs                  # Google Apps Script (Resalib → Cabinet)
+│   ├── cabinet.js                    # Logique legacy (Drive, Google Docs, utilitaires)
+│   ├── cabinet.css                   # Styles (variables CSS, responsive, stat-cards…)
+│   ├── main.js                       # Point d'entrée Alpine.js
+│   ├── manifest.json                 # PWA manifest
+│   ├── sw.js                         # Service Worker (PWA)
+│   ├── cab-drive.js                  # Google Drive + Calendar (Alpine component)
+│   ├── Fiche Client - Shiatsu.pdf    # Template PDF bilan vierge
+│   ├── resalib-sync.gs               # Google Apps Script (Resalib → Cabinet)
+│   ├── components/
+│   │   ├── sidebar.js                # Alpine component — sidebar clients/agenda
+│   │   ├── modal.js                  # Alpine component — modale générique
+│   │   ├── drive-bar.js              # Alpine component — barre Drive
+│   │   ├── accordion.js              # Alpine component — accordéon séances
+│   │   └── toast.js                  # Alpine component — notifications toast
+│   ├── store/
+│   │   └── index.js                  # Alpine store global (clients, sessions, communications…)
+│   └── utils/
+│       ├── api.js                    # Wrapper fetch/API
+│       ├── constants.js              # Constantes (méridiens, états MTC…)
+│       ├── helpers.js                # uid(), esc(), capitalize(), compactUuid()…
+│       ├── sms.js                    # Utilitaires SMS (buildPreparationSms, getPreferredSession…)
+│       └── toast.js                  # showToast()
 │
 ├── blueprints/
-│   ├── cabinet.yaml                     # Blueprint de la page Cabinet
+│   ├── cabinet.yaml                  # Blueprint de la page Cabinet
 │   └── flex-objects/
-│       ├── clients.yaml                 # Schéma Flex Objects — clients
-│       └── rendez_vous.yaml             # Schéma Flex Objects — rendez-vous
+│       ├── clients.yaml              # Schéma Flex Objects — clients
+│       ├── rendez_vous.yaml          # Schéma Flex Objects — rendez-vous
+│       └── communications.yaml       # Schéma Flex Objects — communications (objet dédié)
 │
 ├── classes/
-│   ├── Core.php                         # Auth, CORS, helpers JSON
-│   ├── Api.php                          # Routeur des endpoints REST
-│   ├── Clients.php                      # Recherche de contacts
-│   ├── Seances.php                      # CRUD clients & rendez-vous, payloads
-│   ├── Facturation.php                  # Calcul du récapitulatif de facturation
-│   ├── Sms.php                          # Envoi SMS (SMSMobileAPI)
+│   ├── Core.php                      # Auth, CORS, helpers JSON
+│   ├── Api.php                       # Routeur des endpoints REST
+│   ├── Clients.php                   # Recherche de contacts Grav
+│   ├── Seances.php                   # CRUD clients & rendez-vous, payload de données
+│   ├── Communication.php             # Gestion des communications (lecture, écriture, suppression)
+│   ├── Facturation.php               # Calcul du récapitulatif de facturation
+│   ├── Sms.php                       # Envoi SMS (SMSMobileAPI) + rappels J-1
 │   └── Flex/
-│       └── RendezVousObject.php         # Classe Flex personnalisée pour les RDV
+│       ├── ClientObject.php          # Classe Flex personnalisée — clients
+│       └── RendezVousObject.php      # Classe Flex personnalisée — rendez-vous
 │
 └── templates/
-    ├── cabinet.html.twig                # Template de la page principale
-    └── partials/ ...                    # Partials Twig
+    ├── cabinet.html.twig             # Template principal (assets, layout)
+    └── partials/cabinet/
+        ├── main.html.twig            # Conteneur Alpine main + onglets
+        ├── sidebar.html.twig         # Sidebar clients/agenda
+        ├── modals.html.twig          # Modales (nouvelle séance, paramètres, vérif…)
+        ├── tab-fiche.html.twig       # Onglet Fiche client (stats, formulaire, SMS)
+        ├── tab-seances.html.twig     # Onglet Séances
+        ├── tab-bilan.html.twig       # Onglet Bilan Drive
+        └── tab-communication.html.twig  # Onglet Communication
 ```
 
 ### Stockage des données
 
-Les données sont stockées au format JSON via Flex Objects :
-
 | Collection | Chemin |
 |-----------|--------|
 | Clients | `user/data/flex-objects/clients/` |
-| Rendez-vous | `user/data/rendez_vous/` |
+| Rendez-vous | `user/data/flex-objects/rendez_vous/` |
+| Communications | `user/data/flex-objects/communications.json` |
 
 ---
 
 ## Logs et débogage
 
-Le plugin écrit ses logs dans `logs/cabinet.log` (à la racine de Grav) et dans le log système Grav.
+Les logs sont écrits dans `logs/cabinet.log` (racine Grav).
 
-Format :
 ```
 [2025-06-15 08:00:01] [cabinet] SMS send {"to":"+336XXXXXXXX","len":142}
-[2025-06-15 08:00:02] [cabinet] SMS response {"raw":"{\"status\":\"success\"}"}
+[2025-06-15 08:00:02] [cabinet] SMS response {"status":"success"}
 ```
 
-Pour désactiver les logs, modifier la méthode `isDebugEnabled()` dans `classes/Core.php` :
+Pour désactiver les logs en production, modifier `isDebugEnabled()` dans `classes/Core.php` :
 
 ```php
 public function isDebugEnabled(): bool
 {
-    return false; // désactiver en production si les logs deviennent volumineux
+    return false;
 }
 ```
 

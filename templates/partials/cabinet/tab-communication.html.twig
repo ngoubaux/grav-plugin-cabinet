@@ -1,0 +1,119 @@
+<div x-show="$store.cab.activeTab==='communication'" class="comm-wrap">
+
+  <div class="comm-head">
+    <div class="section-label" style="margin:0">Centre de communication</div>
+    <div class="comm-head-actions">
+      <button class="btn-ghost btn-sm" @click="$store.cab.applyCommunicationTemplate('prep-visite')">Template visite</button>
+      <button class="btn-ghost btn-sm" @click="$store.cab.applyCommunicationTemplate('relance')">Relance douce</button>
+      <button class="btn-ghost btn-sm" @click="$store.cab.applyCommunicationTemplate('compte-rendu')">Compte-rendu</button>
+    </div>
+  </div>
+
+  <div class="comm-grid">
+
+    <div class="comm-compose">
+      <div class="section-label">Nouveau message</div>
+
+      <div class="comm-channel-switch" role="tablist" aria-label="Canal de communication">
+        <button type="button" class="btn-ghost btn-sm"
+                :class="{active: $store.cab.communicationDraft.channel==='sms'}"
+                @click="$store.cab.setCommunicationChannel('sms')">SMS</button>
+        <button type="button" class="btn-ghost btn-sm"
+                :class="{active: $store.cab.communicationDraft.channel==='email'}"
+                @click="$store.cab.setCommunicationChannel('email')">Email</button>
+      </div>
+
+      <div class="field" x-show="$store.cab.communicationDraft.channel==='email'">
+        <label>Objet</label>
+        <input type="text" x-model="$store.cab.communicationDraft.subject" placeholder="Objet de l'email">
+      </div>
+
+      <div class="field" x-show="$store.cab.communicationDraft.channel==='sms'">
+        <label>Destinataire SMS</label>
+        <input type="text" :value="$store.cab.activeClient?.phone || ''" readonly>
+      </div>
+
+      <div class="field" x-show="$store.cab.communicationDraft.channel==='email'">
+        <label>Destinataire Email</label>
+        <input type="text" :value="$store.cab.activeClient?.email || ''" readonly>
+      </div>
+
+      <div class="field">
+        <label>Message</label>
+        <textarea class="comm-message" x-model="$store.cab.communicationDraft.message"
+                  rows="6"
+                  placeholder="Votre message..."></textarea>
+      </div>
+
+      <div class="field">
+        <label>Rappel / suivi (optionnel)</label>
+        <input type="date" x-model="$store.cab.communicationDraft.followUpAt">
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-save" @click="$store.cab.sendCommunication()">
+          Envoyer / préparer
+        </button>
+        <button class="btn-ghost" @click="$store.cab.copyCommunicationMessage()">
+          Copier message
+        </button>
+        <button class="btn-ghost" @click="$store.cab.initCommunicationDraft($store.cab.communicationDraft.channel)">
+          Réinitialiser
+        </button>
+      </div>
+
+      <div class="comm-help">
+        Astuce: si l'envoi SMS API n'est pas configuré, le module ouvre le client SMS natif et garde une trace dans l'historique.
+      </div>
+      <div class="comm-help" x-show="!$store.cab.communicationSettings.googleReviewUrl">
+        Conseil: configurez l'URL Google Business dans l'admin plugin pour activer l'invitation à laisser un avis dans le template compte-rendu.
+      </div>
+    </div>
+
+    <div class="comm-history">
+      <div class="comm-history-head">
+        <div class="section-label" style="margin:0">Historique</div>
+        <select x-model="$store.cab.communicationFilter" class="mer-select" style="max-width:150px">
+          <option value="all">Tout</option>
+          <option value="sms">SMS</option>
+          <option value="email">Email</option>
+        </select>
+      </div>
+
+      <div x-show="$store.cab.activeCommunications.length===0" class="agenda-empty">
+        Aucun échange enregistré pour le moment.
+      </div>
+
+      <template x-for="entry in $store.cab.activeCommunications" :key="entry.id">
+        <div class="comm-item">
+          <div class="comm-item-top">
+            <div class="comm-badges">
+              <span class="energie-chip" :class="entry.channel==='sms' ? 'e-vide' : 'e-ok'"
+                    x-text="entry.channel==='sms' ? 'SMS' : 'EMAIL'"></span>
+              <span class="energie-chip e-nd" x-text="entry.status || 'prepared'"></span>
+              <span class="energie-chip e-stase" x-show="entry.followUpAt"
+                    x-text="'Suivi: ' + entry.followUpAt"></span>
+            </div>
+            <div class="comm-item-actions">
+              <button class="btn-ghost btn-sm" @click="$store.cab.markCommunicationDone(entry.id)">
+                <span x-text="entry.status==='done' ? 'Réouvrir' : 'Traité'"></span>
+              </button>
+              <button class="delete-btn" @click="$store.cab.deleteCommunication(entry.id)">&#10005;</button>
+            </div>
+          </div>
+
+          <div class="comm-meta">
+            <span x-text="new Date(entry.createdAt).toLocaleString('fr-FR')"></span>
+            <span>•</span>
+            <span x-text="entry.to || 'destinataire inconnu'"></span>
+          </div>
+
+          <div class="comm-subject" x-show="entry.subject" x-text="entry.subject"></div>
+          <div class="comm-text" x-text="entry.message"></div>
+        </div>
+      </template>
+    </div>
+
+  </div>
+
+</div>

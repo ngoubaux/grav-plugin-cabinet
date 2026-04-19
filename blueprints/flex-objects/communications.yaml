@@ -1,0 +1,137 @@
+title: Communications
+description: Historique des communications clients (SMS / Email).
+type: flex-objects
+
+config:
+  admin:
+    router:
+      path: '/communications'
+
+    menu:
+      list:
+        route: '/communications'
+        title: Communications
+        icon: fa-comments-o
+        authorize: ['admin.communications.list', 'admin.super']
+        priority: 1
+
+    template: default
+
+    permissions:
+      admin.communications:
+        type: crudpl
+        label: Communications
+
+    list:
+      title: message
+      fields:
+        created_at:
+        client_uuid:
+        channel:
+        to:
+        status:
+        follow_up_at:
+
+    edit:
+      title:
+        template: '{{ object.channel|upper }} · {{ object.to ?? "N/A" }}'
+
+    preview:
+      enabled: false
+
+    export:
+      enabled: true
+      method: 'jsonSerialize'
+      formatter:
+        class: 'Grav\Framework\File\Formatter\YamlFormatter'
+      filename: 'communications'
+
+  site:
+    templates:
+      collection:
+        paths:
+          - 'flex/{TYPE}/collection/{LAYOUT}{EXT}'
+      object:
+        paths:
+          - 'flex/{TYPE}/object/{LAYOUT}{EXT}'
+      defaults:
+        type: communications
+        layout: default
+
+  data:
+    object: 'Grav\Common\Flex\Types\Generic\GenericObject'
+    collection: 'Grav\Common\Flex\Types\Generic\GenericCollection'
+    index: 'Grav\Common\Flex\Types\Generic\GenericIndex'
+    storage:
+      class: 'Grav\Framework\Flex\Storage\SimpleStorage'
+      options:
+        formatter:
+          class: 'Grav\Framework\File\Formatter\JsonFormatter'
+        folder: user-data://flex-objects/communications.json
+    search:
+      options:
+        contains: 1
+      fields:
+        - client_uuid
+        - channel
+        - to
+        - subject
+        - message
+
+form:
+  validation: loose
+
+  fields:
+    published:
+      type: toggle
+      label: Published
+      highlight: 1
+      default: 1
+      options:
+        1: PLUGIN_ADMIN.YES
+        0: PLUGIN_ADMIN.NO
+      validate:
+        type: bool
+        required: true
+
+    client_uuid:
+      type: text
+      label: Client UUID
+      validate:
+        required: true
+
+    created_at:
+      type: text
+      label: Created At
+
+    channel:
+      type: select
+      label: Canal
+      default: sms
+      options:
+        sms: SMS
+        email: Email
+
+    to:
+      type: text
+      label: Destinataire
+
+    subject:
+      type: text
+      label: Objet
+
+    message:
+      type: textarea
+      label: Message
+
+    status:
+      type: text
+      label: Statut
+
+    follow_up_at:
+      type: date
+      label: Suivi
+
+    transport:
+      type: text
+      label: Transport

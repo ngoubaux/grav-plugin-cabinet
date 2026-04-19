@@ -19,12 +19,15 @@
         </div>
         <div class="tab" :class="{active: $store.cab.activeTab==='bilan'}"
              @click="$store.cab.setTab('bilan')">Bilan</div>
+        <div class="tab" :class="{active: $store.cab.activeTab==='communication'}"
+             @click="$store.cab.setTab('communication')">Communication</div>
       </div>
 
       <div class="main-body">
         {% include 'partials/cabinet/tab-fiche.html.twig' %}
         {% include 'partials/cabinet/tab-seances.html.twig' %}
         {% include 'partials/cabinet/tab-bilan.html.twig' %}
+        {% include 'partials/cabinet/tab-communication.html.twig' %}
       </div>
 
     </div>
