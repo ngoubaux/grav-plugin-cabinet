@@ -199,6 +199,64 @@ class Communication
         return $flex->getDirectory('communications');
     }
 
+    // ── SMS queue (Termux cron) ───────────────────────────────────────────────
+
+    /**
+     * Return all SMS communications whose status is 'prepared'.
+     * Used by the Termux cron script to fetch pending messages.
+     */
+    public function getSmsQueue(): void
+    {
+        $dir = $this->requireCommunicationsDirectory();
+        $items = [];
+
+        foreach ($dir->getCollection() as $storageKey => $record) {
+            $arr = $this->flexObjectToArray($record);
+            if (strtolower((string) ($arr['channel'] ?? '')) !== 'sms') {
+                continue;
+            }
+            if (strtolower((string) ($arr['status'] ?? '')) !== 'prepared') {
+                continue;
+            }
+            $to = (string) ($arr['to'] ?? '');
+            if ($to === '') {
+                continue;
+            }
+            $items[] = [
+                'id'      => (string) $storageKey,
+                'to'      => $to,
+                'message' => (string) ($arr['message'] ?? ''),
+            ];
+        }
+
+        $this->core->jsonExit(['items' => $items]);
+    }
+
+    /**
+     * Mark a queued SMS as sent (status → 'sent').
+     * Called by the Termux cron script after a successful termux-sms-send.
+     */
+    public function ackSmsQueueItem(string $id): void
+    {
+        $dir = $this->requireCommunicationsDirectory();
+        $obj = $dir->getObject($id);
+
+        if (!$obj) {
+            $this->core->jsonExit(['error' => 'SMS queue item not found'], 404);
+        }
+
+        $arr = $this->flexObjectToArray($obj);
+        if (strtolower((string) ($arr['channel'] ?? '')) !== 'sms') {
+            $this->core->jsonExit(['error' => 'Not an SMS record'], 400);
+        }
+
+        $obj->status = 'sent';
+        $obj->sent_at = date('c');
+        $obj->save();
+
+        $this->core->jsonExit(['ok' => true]);
+    }
+
     private function flexObjectToArray($object): array
     {
         if (is_array($object)) {

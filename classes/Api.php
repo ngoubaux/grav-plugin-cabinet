@@ -156,6 +156,17 @@ class Api
             $this->sms->handleSendRappels();
         }
 
+        // ── SMS queue (Termux cron) ───────────────────────────────────────────
+        if ($path === '/api/cabinet/sms/queue' && $method === 'GET') {
+            $this->core->requireSessionOrApiKey();
+            $this->communication->getSmsQueue();
+        }
+
+        if (preg_match('#^/api/cabinet/sms/queue/([a-zA-Z0-9_%-]+)/ack$#', $path, $m) && $method === 'POST') {
+            $this->core->requireSessionOrApiKey();
+            $this->communication->ackSmsQueueItem(rawurldecode($m[1]));
+        }
+
         $this->core->jsonExit(['error' => 'Route not found'], 404);
     }
 

@@ -15,11 +15,12 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 7. [Module Communication](#module-communication)
 8. [Intégration Google (OAuth, Drive, Agenda)](#intégration-google)
 9. [SMS — Multi-provider](#sms--multi-provider)
-10. [Synchronisation Resalib (Google Apps Script)](#synchronisation-resalib)
-11. [API REST](#api-rest)
-12. [Scheduler Grav — Rappels automatiques](#scheduler-grav)
-13. [Structure des fichiers](#structure-des-fichiers)
-14. [Logs et débogage](#logs-et-débogage)
+10. [MacroDroid — File d'attente SMS (gratuit)](#macrodroid--file-dattente-sms-gratuit)
+11. [Synchronisation Resalib (Google Apps Script)](#synchronisation-resalib)
+12. [API REST](#api-rest)
+13. [Scheduler Grav — Rappels automatiques](#scheduler-grav)
+14. [Structure des fichiers](#structure-des-fichiers)
+15. [Logs et débogage](#logs-et-débogage)
 
 ---
 
@@ -33,7 +34,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 | **Communication** | Module dédié : historique des échanges SMS/email, envoi et suggestions de templates par client |
 | **Bilan PDF** | Visualisation et upload des bilans Boox (NoteAir) depuis Google Drive |
 | **Facturation** | Récapitulatif des séances réalisées par client |
-| **SMS** | Envoi direct du SMS de préparation via fournisseur configurable (SMSMobileAPI ou Simple SMS Gateway) + fallback local confirmé + rappels automatiques J-1 |
+| **SMS** | Envoi direct du SMS de préparation via fournisseur configurable (SMSMobileAPI, Simple SMS Gateway ou **MacroDroid**) + fallback local confirmé + rappels automatiques J-1 |
 | **Resalib Sync** | Script Google Apps Script pour synchroniser les RDV Resalib → Cabinet |
 | **API REST** | Endpoints JSON sécurisés (session Grav ou clé API) pour intégration avec Make.com ou scripts tiers |
 | **Menu Admin** | Entrée « Cabinet » dans la navigation Grav Admin (accès rapide `fa-briefcase`) |
@@ -120,7 +121,7 @@ communication_template_compte_rendu: ''
 | `drive_bilan_path` | Chemin Drive des bilans PDF. Séparateur `/`, sans slash en début/fin. |
 | `sms_enabled` | Active l'envoi automatique des rappels J-1 via le scheduler Grav. |
 | `sms_api_key` | Clé API SMSMobileAPI (requise si `sms_provider: smsmobileapi`). |
-| `sms_provider` | Fournisseur SMS utilisé : `smsmobileapi` ou `simple_sms_gateway`. |
+| `sms_provider` | Fournisseur SMS utilisé : `smsmobileapi`, `simple_sms_gateway` ou `macrodroid`. |
 | `sms_simple_gateway_url` | Endpoint HTTP de la passerelle Android (payload JSON `phone` + `message`). |
 | `sms_simple_gateway_token` | Token Bearer optionnel pour la passerelle Simple SMS Gateway. |
 | `sms_http_gateway_url` | Clé legacy, encore lue en fallback si `sms_simple_gateway_url` est vide. |
@@ -312,11 +313,23 @@ Renseigner `google_calendar_id` (visible dans les paramètres du calendrier → 
 
 ### Fournisseurs supportés
 
-- `smsmobileapi` : envoi via API cloud SMSMobileAPI (requiert `sms_api_key`).
-- `simple_sms_gateway` : envoi via endpoint HTTP de votre telephone Android proxy (requiert `sms_simple_gateway_url`).
-- Compatibilité legacy : les clés `sms_http_gateway_url` et `sms_http_gateway_token` restent supportées en fallback serveur.
+| Provider | Description | Coût |
+|----------|-------------|------|
+| `smsmobileapi` | API cloud SMSMobileAPI (requiert `sms_api_key`) | Payant |
+| `simple_sms_gateway` | Endpoint HTTP d'un téléphone Android proxy (requiert `sms_simple_gateway_url`) | Gratuit |
+| `macrodroid` | File d'attente polled par MacroDroid sur Android — **aucune app tierce, aucun compte** | Gratuit |
 
 ### Configuration du provider
+
+Exemple MacroDroid :
+
+```yaml
+sms_enabled: true
+sms_provider: 'macrodroid'
+api_key: 'votre-cle-api'   # utilisée comme Bearer token dans MacroDroid
+```
+
+Voir la [section MacroDroid](#macrodroid--file-dattente-sms-gratuit) pour la configuration complète du macro.
 
 Exemple SMSMobileAPI :
 
@@ -363,6 +376,155 @@ Dans le formulaire de séance, cocher **Désactiver le rappel SMS J-1**.
 ### Logique anti-doublon
 
 Le champ `sms_rappel_sent_date` empêche l'envoi de plus d'un rappel par jour et par rendez-vous.
+
+---
+
+## MacroDroid — File d'attente SMS (gratuit)
+
+Avec le provider `macrodroid`, Grav n'envoie pas les SMS directement. Il les écrit dans la file d'attente (`status=prepared`). Un macro MacroDroid sur votre téléphone Android interroge cette file toutes les N minutes et envoie chaque SMS via l'antenne native du téléphone.
+
+**Aucun compte, aucune app tierce, aucun abonnement.**
+
+### Prérequis
+
+- Android avec [MacroDroid](https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid) installé (version gratuite suffisante)
+- Votre site Grav accessible en HTTPS depuis le téléphone
+- `api_key` renseigné dans `cabinet.yaml`
+
+### Activer le provider
+
+```yaml
+sms_enabled: true
+sms_provider: 'macrodroid'
+```
+
+### Créer le macro MacroDroid — copier/coller
+
+Dans MacroDroid : **Mes Macros → +** puis configurer comme suit.
+
+---
+
+#### Déclencheur (Trigger)
+
+```
+Type : Minuteur périodique
+Intervalle : 10 minutes
+```
+
+---
+
+#### Action 1 — Récupérer la file d'attente
+
+```
+Type   : Networking → Requête HTTP
+Méthode: GET
+URL    : https://VOTRE_SITE/api/cabinet/sms/queue
+
+En-têtes :
+  Authorization : Bearer VOTRE_API_KEY
+  Accept        : application/json
+
+Variable de réponse : [lv_queue_response]
+```
+
+---
+
+#### Action 2 — Extraire le nombre d'éléments
+
+```
+Type    : Variables → Définir variable
+[lv_count] = Expression JSONPath
+  Source : [lv_queue_response]
+  Chemin : $.items.length()
+```
+
+---
+
+#### Action 3 — Contrainte (ne rien faire si la file est vide)
+
+```
+Type : Contrainte → Expression
+  [lv_count] > 0
+```
+
+---
+
+#### Action 4 — Boucle sur chaque item
+
+```
+Type       : Boucles → Pour chaque (tableau JSON)
+Source JSON: [lv_queue_response]
+Chemin JSON: $.items[*]
+Variable   : [lv_item]
+```
+
+**Dans la boucle :**
+
+```
+┌─ Définir variable ─────────────────────────────────┐
+│ [lv_id]      = JSONPath([lv_item], $.id)           │
+│ [lv_to]      = JSONPath([lv_item], $.to)           │
+│ [lv_message] = JSONPath([lv_item], $.message)      │
+└────────────────────────────────────────────────────┘
+
+┌─ Envoyer un SMS ───────────────────────────────────┐
+│ Numéro  : [lv_to]                                  │
+│ Message : [lv_message]                             │
+└────────────────────────────────────────────────────┘
+
+┌─ Requête HTTP (ack) ───────────────────────────────┐
+│ Méthode : POST                                     │
+│ URL     : https://VOTRE_SITE/api/cabinet/sms/      │
+│           queue/[lv_id]/ack                        │
+│ En-têtes:                                          │
+│   Authorization : Bearer VOTRE_API_KEY             │
+│   Content-Type  : application/json                 │
+│ Corps   : {}                                       │
+└────────────────────────────────────────────────────┘
+```
+
+---
+
+#### Action 5 — Fin de boucle
+
+```
+Type : Boucles → Fin de boucle
+```
+
+---
+
+#### Action 6 — Notification (optionnel)
+
+```
+Type  : Notifications → Créer une notification
+Titre : SMS Cabinet
+Texte : [lv_count] SMS envoyé(s) ✓
+```
+
+---
+
+### Remplacer les variables
+
+| Placeholder | Valeur |
+|-------------|--------|
+| `VOTRE_SITE` | URL de votre site Grav, ex : `https://monsite.com` |
+| `VOTRE_API_KEY` | Valeur de `api_key` dans `cabinet.yaml` |
+
+### Flux complet
+
+```
+Grav (provider=macrodroid)
+  → écrit status=prepared dans communications Flex
+
+MacroDroid (toutes les 10 min)
+  → GET /api/cabinet/sms/queue          (récupère les SMS préparés)
+  → Envoie chaque SMS via antenne Android
+  → POST /api/cabinet/sms/queue/{id}/ack (marque status=sent)
+```
+
+### Retrouver les SMS envoyés
+
+Dans l'onglet **Communication** de chaque client, les SMS passent automatiquement de `prepared` → `sent` après l'ack MacroDroid. Le champ `sent_at` contient l'horodatage exact.
 
 ---
 
@@ -421,6 +583,8 @@ Authentification : **session Grav** ou en-tête `X-Api-Key`.
 | `POST` | `/api/cabinet/sms/send-preparation` | Envoyer le SMS de préparation via le provider SMS configuré (template admin + `client_id`) |
 | `POST` | `/api/cabinet/sms/preparation` | Préparer/valider un brouillon de SMS de préparation (template admin) |
 | `POST` | `/api/cabinet/sms/rappels` | Déclencher manuellement les rappels J-1 |
+| `GET` | `/api/cabinet/sms/queue` | Lister les SMS en attente (`status=prepared`, `channel=sms`) — utilisé par MacroDroid |
+| `POST` | `/api/cabinet/sms/queue/{id}/ack` | Marquer un SMS comme envoyé (`status=sent`) — appelé par MacroDroid après envoi |
 | `GET` | `/api/contacts/search` | Rechercher un client par nom/email |
 | `GET` | `/cabinet/bilan-template.pdf` | Télécharger le template PDF |
 
