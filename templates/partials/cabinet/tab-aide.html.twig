@@ -63,7 +63,7 @@
         Script Python cron sur votre téléphone Android.
         <strong>Aucun compte, aucune app tierce.</strong>
         Nécessite Termux + Termux:API (F-Droid) et le provider
-        <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">macrodroid</code>
+        <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">android_queue</code>
         dans les réglages.
       </div>
 
@@ -127,7 +127,7 @@
   {{# ── Section : MacroDroid ── #}}
   <div class="help-section">
     <div class="help-section-head" @click="open = open==='macrodroid' ? null : 'macrodroid'">
-      <span class="help-section-title">🤖 MacroDroid</span>
+      <span class="help-section-title">🤖 MacroDroid <span style="font-size:11px;opacity:.7">(alternative sans terminal)</span></span>
       <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='macrodroid' ? '▲' : '▼'"></span>
     </div>
     <div class="help-section-body" x-show="open==='macrodroid'">
@@ -135,7 +135,7 @@
       <div class="help-note">
         Alternative sans ligne de commande : macro visuelle sur Android.
         <strong>Aucun compte.</strong>
-        Même provider <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">macrodroid</code> que Termux.
+        Même provider <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">android_queue</code> que Termux.
       </div>
 
       <ol class="help-steps">
@@ -221,6 +221,7 @@ Corps : {"status":"sent"}</code>
       <p style="font-size:13px;margin-bottom:12px;line-height:1.6">
         La clé API (<code style="font-size:11px;background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px">X-Api-Key</code>)
         permet aux scripts externes (Termux, MacroDroid) d'accéder à l'API sans session Grav.
+        Si un <strong>Token push</strong> (<code style="font-size:11px;background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px">sms_push_token</code>) est configuré, les scripts Android l'utilisent à la place.
         Elle doit être longue, aléatoire et gardée secrète.
       </p>
 

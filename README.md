@@ -15,8 +15,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 7. [Module Communication](#module-communication)
 8. [Intégration Google (OAuth, Drive, Agenda)](#intégration-google)
 9. [SMS — Multi-provider](#sms--multi-provider)
-10. [MacroDroid — File d'attente SMS (gratuit)](#macrodroid--file-dattente-sms-gratuit)
-11. [Termux + Cron — File d'attente SMS (Android natif)](#termux--cron--file-dattente-sms-android-natif)
+10. [Android natif — File d'attente SMS (MacroDroid / Termux)](#android-natif--file-dattente-sms-macrodroid--termux)
 12. [Synchronisation Resalib (Google Apps Script)](#synchronisation-resalib)
 13. [API REST](#api-rest)
 14. [Scheduler Grav — Rappels automatiques](#scheduler-grav)
@@ -35,7 +34,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 | **Communication** | Module dédié : historique des échanges SMS/email, envoi et suggestions de templates par client |
 | **Bilan PDF** | Visualisation et upload des bilans Boox (NoteAir) depuis Google Drive |
 | **Facturation** | Récapitulatif des séances réalisées par client |
-| **SMS** | Envoi direct du SMS de préparation via fournisseur configurable (SMSMobileAPI, Simple SMS Gateway ou **MacroDroid**) + fallback local confirmé + rappels automatiques J-1 |
+| **SMS** | Envoi direct du SMS de préparation via fournisseur configurable (SMSMobileAPI, Simple SMS Gateway ou **android_queue**) + fallback local confirmé + rappels automatiques J-1 |
 | **Resalib Sync** | Script Google Apps Script pour synchroniser les RDV Resalib → Cabinet |
 | **API REST** | Endpoints JSON sécurisés (session Grav ou clé API) pour intégration avec Make.com ou scripts tiers |
 | **Menu Admin** | Entrée « Cabinet » dans la navigation Grav Admin (accès rapide `fa-briefcase`) |
@@ -99,7 +98,7 @@ sms_enabled: false
 sms_api_key: ''
 sms_provider: 'smsmobileapi'
 sms_simple_gateway_url: ''
-sms_simple_gateway_token: ''
+sms_push_token: ''
 sms_http_gateway_url: ''
 sms_http_gateway_token: ''
 sms_rappel_cron: '0 8 * * *'   # tous les jours à 8h00
@@ -122,11 +121,11 @@ communication_template_compte_rendu: ''
 | `drive_bilan_path` | Chemin Drive des bilans PDF. Séparateur `/`, sans slash en début/fin. |
 | `sms_enabled` | Active l'envoi automatique des rappels J-1 via le scheduler Grav. |
 | `sms_api_key` | Clé API SMSMobileAPI (requise si `sms_provider: smsmobileapi`). |
-| `sms_provider` | Fournisseur SMS utilisé : `smsmobileapi`, `simple_sms_gateway` ou `macrodroid`. |
+| `sms_provider` | Fournisseur SMS utilisé : `smsmobileapi`, `simple_sms_gateway` ou `android_queue`. |
 | `sms_simple_gateway_url` | Endpoint HTTP de la passerelle Android (payload JSON `phone` + `message`). |
-| `sms_simple_gateway_token` | Token Bearer optionnel pour la passerelle Simple SMS Gateway. |
+| `sms_push_token` | Token partagé pour les providers push : Bearer pour `simple_sms_gateway`, X-Api-Key injecté dans les scripts Termux/MacroDroid. Si vide, les scripts Android utilisent `api_key`. |
 | `sms_http_gateway_url` | Clé legacy, encore lue en fallback si `sms_simple_gateway_url` est vide. |
-| `sms_http_gateway_token` | Clé legacy, encore lue en fallback si `sms_simple_gateway_token` est vide. |
+| `sms_http_gateway_token` | Clé legacy, encore lue en fallback si `sms_push_token` est vide. |
 | `sms_rappel_cron` | Expression cron pour l'heure d'envoi des rappels. |
 | `communication_google_review_url` | URL fiche Google Business, utilisée dans les templates de compte-rendu. |
 | `communication_template_prep_visite` | Template SMS de préparation visite (voir variables ci-dessous). |
@@ -285,15 +284,13 @@ Scopes demandés :
 
 ### Structure des bilans sur Google Drive
 
-Le paramètre `drive_bilan_path` définit le dossier racine. Chaque client doit avoir un sous-dossier nommé **Prénom NOM** :
+Le paramètre `drive_bilan_path` définit le dossier racine. Les bilans sont des fichiers PDF nommés **`Prénom Nom.pdf`** (prénom puis nom, séparés d'un espace), stockés directement dans ce dossier — pas de sous-dossiers par client :
 
 ```
 Mon Drive/
 └── onyx/NoteAir5c/Cahiers/clients/
-    ├── Anne DUPONT/
-    │   └── bilan-2025-03.pdf
-    └── Jean MARTIN/
-        └── bilan.pdf
+    ├── Anne Dupont.pdf
+    └── Jean Martin.pdf
 ```
 
 ### Tablette Boox Note Air 5C
@@ -318,19 +315,19 @@ Renseigner `google_calendar_id` (visible dans les paramètres du calendrier → 
 |----------|-------------|------|
 | `smsmobileapi` | API cloud SMSMobileAPI (requiert `sms_api_key`) | Payant |
 | `simple_sms_gateway` | Endpoint HTTP d'un téléphone Android proxy (requiert `sms_simple_gateway_url`) | Gratuit |
-| `macrodroid` | File d'attente polled par MacroDroid sur Android — **aucune app tierce, aucun compte** | Gratuit |
+| `android_queue` | File d'attente polled par MacroDroid ou Termux sur Android — **aucune app tierce, aucun compte** | Gratuit |
 
 ### Configuration du provider
 
-Exemple MacroDroid :
+Exemple Android natif (MacroDroid ou Termux) :
 
 ```yaml
 sms_enabled: true
-sms_provider: 'macrodroid'
-api_key: 'votre-cle-api'   # utilisée comme Bearer token dans MacroDroid
+sms_provider: 'android_queue'
+sms_push_token: 'votre-token-push'   # optionnel — injecté dans les scripts Android
 ```
 
-Voir la [section MacroDroid](#macrodroid--file-dattente-sms-gratuit) pour la configuration complète du macro.
+Voir la [section Android natif](#android-natif--file-dattente-sms-macrodroid--termux) pour la configuration complète.
 
 Exemple SMSMobileAPI :
 
@@ -346,7 +343,7 @@ Exemple Simple SMS Gateway :
 sms_enabled: true
 sms_provider: 'simple_sms_gateway'
 sms_simple_gateway_url: 'https://votre-passerelle.example/send-sms'
-sms_simple_gateway_token: 'token-optionnel'
+sms_push_token: 'token-optionnel'   # même paramètre que pour android_queue
 ```
 
 ### Compte SMSMobileAPI (si provider = SMSMobileAPI)
@@ -380,181 +377,49 @@ Le champ `sms_rappel_sent_date` empêche l'envoi de plus d'un rappel par jour et
 
 ---
 
-## MacroDroid — File d'attente SMS (gratuit)
+## Android natif — File d'attente SMS (MacroDroid / Termux)
 
-Avec le provider `macrodroid`, Grav n'envoie pas les SMS directement. Il les écrit dans la file d'attente (`status=prepared`). Un macro MacroDroid sur votre téléphone Android interroge cette file toutes les N minutes et envoie chaque SMS via l'antenne native du téléphone.
+Avec le provider `android_queue`, Grav n'envoie pas les SMS directement. Il les écrit dans la file d'attente (`status=prepared`). Votre téléphone Android interroge cette file toutes les 10 minutes et envoie chaque SMS via l'antenne native.
 
 **Aucun compte, aucune app tierce, aucun abonnement.**
-
-### Prérequis
-
-- Android avec [MacroDroid](https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid) installé (version gratuite suffisante)
-- Votre site Grav accessible en HTTPS depuis le téléphone
-- `api_key` renseigné dans `cabinet.yaml`
 
 ### Activer le provider
 
 ```yaml
 sms_enabled: true
-sms_provider: 'macrodroid'
+sms_provider: 'android_queue'
+sms_push_token: 'votre-token-push'   # optionnel — si vide, utilise api_key
 ```
 
-### Créer le macro MacroDroid — pas à pas
+> `sms_push_token` est le token partagé par les deux options ci-dessous. Si configuré, il est injecté dans les scripts Android et accepté comme `X-Api-Key` par l'API.
 
-Dans MacroDroid : appuyer sur **+** (bas de l'écran) → **Créer un macro** → donner un nom (ex : *Cabinet SMS*).
+### Option A — Termux + Cron (recommandé)
 
----
+Script Python automatisé, installation en une commande. Nécessite :
 
-#### Déclencheur
-
-1. Appuyer sur **DÉCLENCHEURS → +**
-2. Choisir **Minuterie → Minuterie périodique**
-3. Intervalle : **10 minutes** → OK
-
----
-
-#### Action 1 — Récupérer la file d'attente SMS
-
-1. **ACTIONS → +**
-2. **Connectivité → Requête HTTP**
-3. Remplir :
-   - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue`
-   - **Méthode** : `GET`
-4. Appuyer sur l'onglet **En-têtes** → **+** → ajouter :
-   - Clé : `X-Api-Key` / Valeur : `VOTRE_API_KEY`
-   - Clé : `Accept` / Valeur : `application/json`
-5. Onglet **Réponse** → cocher **Enregistrer la réponse dans une variable** → nom : `queue_response`
-6. OK
-
----
-
-#### Action 2 — Boucle sur chaque SMS en attente
-
-1. **ACTIONS → +**
-2. **Boucle → Pour chaque**
-3. Dans **Source** choisir **Tableau JSON**
-4. Variable JSON : `{queue_response}` (sélectionner depuis la liste)
-5. Chemin JSONPath : `$.items`
-6. Variable de boucle : `item`
-7. OK
-
----
-
-#### Action 3 — (dans la boucle) Extraire les champs
-
-1. **ACTIONS → +**
-2. **Variables → Définir une variable**
-3. Créer la variable `sms_id`
-   - Type de valeur : **Expression JSONPath**
-   - JSON : `{item}`
-   - Chemin : `$.id`
-4. Répéter pour `sms_to` (chemin `$.to`) et `sms_message` (chemin `$.message`)
-
----
-
-#### Action 4 — (dans la boucle) Envoyer le SMS
-
-1. **ACTIONS → +**
-2. **Messages → Envoyer un SMS**
-3. **Numéro** : `{sms_to}`
-4. **Message** : `{sms_message}`
-5. OK
-
----
-
-#### Action 5 — (dans la boucle) Confirmer l'envoi (ack)
-
-1. **ACTIONS → +**
-2. **Connectivité → Requête HTTP**
-3. Remplir :
-   - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue/{sms_id}/ack`
-   - **Méthode** : `POST`
-4. Onglet **En-têtes** → **+** :
-   - `X-Api-Key` : `VOTRE_API_KEY`
-   - `Content-Type` : `application/json`
-5. Onglet **Corps** → `{"status":"sent"}`
-6. OK
-
----
-
-#### Action 6 — Fin de boucle
-
-1. **ACTIONS → +**
-2. **Boucle → Fin de boucle**
-
----
-
-#### Action 7 — Notification (optionnel)
-
-1. **ACTIONS → +**
-2. **Notifications → Créer une notification**
-3. **Titre** : `SMS Cabinet`
-4. **Texte** : `SMS envoyés ✓`
-5. OK
-
----
-
-### Remplacer les variables
-
-| Placeholder | Valeur |
-|-------------|--------|
-| `VOTRE_SITE` | URL de votre site Grav, ex : `https://monsite.com` |
-| `VOTRE_API_KEY` | Valeur de `api_key` dans `cabinet.yaml` |
-
-### Flux complet
-
-```
-Grav (provider=macrodroid)
-  → écrit status=prepared dans communications Flex
-
-MacroDroid (toutes les 10 min)
-  → GET /api/cabinet/sms/queue          (récupère les SMS préparés)
-  → Envoie chaque SMS via antenne Android
-  → POST /api/cabinet/sms/queue/{id}/ack (marque status=sent)
-```
-
-### Retrouver les SMS envoyés
-
-Dans l'onglet **Communication** de chaque client, les SMS passent automatiquement de `prepared` → `sent` après l'ack MacroDroid. Le champ `sent_at` contient l'horodatage exact.
-
----
-
-## Termux + Cron — File d'attente SMS (Android natif)
-
-Alternative à MacroDroid utilisant **Termux** (terminal Linux sur Android) et un script Python. Aucun macro, aucune interface graphique à configurer — un seul script cron toutes les 10 minutes.
-
-**Aucun compte, aucune app tierce, aucun abonnement.**
-
-> Compatible avec le provider `macrodroid` : le même mécanisme de file d'attente (`status=prepared`) est utilisé. Vous pouvez choisir l'un ou l'autre selon vos préférences.
-
-### Prérequis
-
-- Android avec [Termux](https://f-droid.org/fr/packages/com.termux/) installé (depuis F-Droid)
-- App **Termux:API** installée (depuis F-Droid) — fournit `termux-sms-send`
-- App **Termux:Boot** installée (optionnel — relance automatique après redémarrage)
+- [Termux](https://f-droid.org/fr/packages/com.termux/) + **Termux:API** (depuis F-Droid)
+- **Termux:Boot** (optionnel — relance automatique après redémarrage)
 - Votre site Grav accessible en HTTPS depuis le téléphone
-- `api_key` renseigné dans `cabinet.yaml`
-- `sms_provider: macrodroid` dans `cabinet.yaml`
-
-### Installation en une commande
 
 Depuis Termux, exécuter :
 
 ```bash
 curl -fsSL "https://VOTRE_SITE/api/cabinet/termux/bootstrap" \
-     -H "X-Api-Key: VOTRE_API_KEY" | bash
+     -H "X-Api-Key: VOTRE_TOKEN" | bash
 ```
 
 Pour un téléphone multi-SIM (utiliser la SIM slot 0) :
 
 ```bash
 curl -fsSL "https://VOTRE_SITE/api/cabinet/termux/bootstrap?sim=0" \
-     -H "X-Api-Key: VOTRE_API_KEY" | bash
+     -H "X-Api-Key: VOTRE_TOKEN" | bash
 ```
 
-Le script bootstrap est **généré dynamiquement par Grav** (template Twig) avec l'URL du site et la clé API déjà injectées — aucune saisie interactive.
+> `VOTRE_TOKEN` = valeur de `sms_push_token` (ou `api_key` si `sms_push_token` est vide).
 
-### Ce que fait le bootstrap
+Le script bootstrap est **généré dynamiquement par Grav** avec l'URL du site et le token déjà injectés — aucune saisie interactive.
+
+#### Ce que fait le bootstrap
 
 1. Met à jour les paquets Termux (`pkg update`)
 2. Installe les dépendances : `curl`, `python`, `cronie`, `termux-api`
@@ -563,7 +428,7 @@ Le script bootstrap est **généré dynamiquement par Grav** (template Twig) ave
 5. Configure le démarrage automatique de `crond` via Termux:Boot (si disponible)
 6. Effectue un test de connexion à l'API
 
-### Fonctionnement du script Python
+#### Fonctionnement du script Python
 
 À chaque exécution (`termux-sms-queue.py`) :
 
@@ -577,14 +442,7 @@ GET /api/cabinet/sms/queue          → récupère les SMS status=prepared
 
 Le script utilise exclusivement la bibliothèque standard Python (`urllib`, `json`, `subprocess`, `logging`) — aucun `pip install` nécessaire.
 
-### Endpoint ACK — statuts supportés
-
-| Body envoyé | Effet côté serveur |
-|---|---|
-| `{"status": "sent"}` | `status=sent`, `sent_at=<horodatage>` |
-| `{"status": "error", "error": "raison"}` | `status=error`, `error_at=<horodatage>`, `error_message=<raison>` |
-
-### Logs
+#### Logs
 
 Les logs sont écrits dans `~/sms-queue.log` avec rotation automatique à 500 KB :
 
@@ -597,7 +455,7 @@ Les logs sont écrits dans `~/sms-queue.log` avec rotation automatique à 500 KB
 [2025-06-15 08:00:02] Terminé — 1 envoyé(s), 0 échec(s)
 ```
 
-### Endpoints Grav utilisés
+#### Endpoints Grav utilisés
 
 | Méthode | Route | Description |
 |---------|-------|-------------|
@@ -606,18 +464,142 @@ Les logs sont écrits dans `~/sms-queue.log` avec rotation automatique à 500 KB
 
 Ces deux endpoints requièrent l'en-tête `X-Api-Key`.
 
-### Flux complet
+---
+
+### Option B — MacroDroid (sans ligne de commande)
+
+Macro visuelle sur Android, aucun terminal nécessaire. Nécessite :
+
+- [MacroDroid](https://play.google.com/store/apps/details?id=com.arlosoft.macrodroid) installé (version gratuite suffisante)
+- Votre site Grav accessible en HTTPS depuis le téléphone
+
+#### Créer le macro MacroDroid — pas à pas
+
+Dans MacroDroid : appuyer sur **+** (bas de l'écran) → **Créer un macro** → donner un nom (ex : *Cabinet SMS*).
+
+---
+
+##### Déclencheur
+
+1. Appuyer sur **DÉCLENCHEURS → +**
+2. Choisir **Minuterie → Minuterie périodique**
+3. Intervalle : **10 minutes** → OK
+
+---
+
+##### Action 1 — Récupérer la file d'attente SMS
+
+1. **ACTIONS → +**
+2. **Connectivité → Requête HTTP**
+3. Remplir :
+   - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue`
+   - **Méthode** : `GET`
+4. Appuyer sur l'onglet **En-têtes** → **+** → ajouter :
+   - Clé : `X-Api-Key` / Valeur : `VOTRE_TOKEN`
+   - Clé : `Accept` / Valeur : `application/json`
+5. Onglet **Réponse** → cocher **Enregistrer la réponse dans une variable** → nom : `queue_response`
+6. OK
+
+---
+
+##### Action 2 — Boucle sur chaque SMS en attente
+
+1. **ACTIONS → +**
+2. **Boucle → Pour chaque**
+3. Dans **Source** choisir **Tableau JSON**
+4. Variable JSON : `{queue_response}` (sélectionner depuis la liste)
+5. Chemin JSONPath : `$.items`
+6. Variable de boucle : `item`
+7. OK
+
+---
+
+##### Action 3 — (dans la boucle) Extraire les champs
+
+1. **ACTIONS → +**
+2. **Variables → Définir une variable**
+3. Créer la variable `sms_id`
+   - Type de valeur : **Expression JSONPath**
+   - JSON : `{item}`
+   - Chemin : `$.id`
+4. Répéter pour `sms_to` (chemin `$.to`) et `sms_message` (chemin `$.message`)
+
+---
+
+##### Action 4 — (dans la boucle) Envoyer le SMS
+
+1. **ACTIONS → +**
+2. **Messages → Envoyer un SMS**
+3. **Numéro** : `{sms_to}`
+4. **Message** : `{sms_message}`
+5. OK
+
+---
+
+##### Action 5 — (dans la boucle) Confirmer l'envoi (ack)
+
+1. **ACTIONS → +**
+2. **Connectivité → Requête HTTP**
+3. Remplir :
+   - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue/{sms_id}/ack`
+   - **Méthode** : `POST`
+4. Onglet **En-têtes** → **+** :
+   - `X-Api-Key` : `VOTRE_TOKEN`
+   - `Content-Type` : `application/json`
+5. Onglet **Corps** → `{"status":"sent"}`
+6. OK
+
+---
+
+##### Action 6 — Fin de boucle
+
+1. **ACTIONS → +**
+2. **Boucle → Fin de boucle**
+
+---
+
+##### Action 7 — Notification (optionnel)
+
+1. **ACTIONS → +**
+2. **Notifications → Créer une notification**
+3. **Titre** : `SMS Cabinet`
+4. **Texte** : `SMS envoyés ✓`
+5. OK
+
+---
+
+#### Remplacer les variables
+
+| Placeholder | Valeur |
+|-------------|--------|
+| `VOTRE_SITE` | URL de votre site Grav, ex : `https://monsite.com` |
+| `VOTRE_TOKEN` | Valeur de `sms_push_token` (ou `api_key` si `sms_push_token` est vide) |
+
+---
+
+### Flux complet (Termux ou MacroDroid)
 
 ```
-Grav (provider=macrodroid)
+Grav (provider=android_queue)
   → écrit status=prepared dans communications Flex
 
-Termux cron (toutes les 10 min)
-  → GET /api/cabinet/sms/queue
-  → termux-sms-send pour chaque SMS
-  → POST /api/cabinet/sms/queue/{id}/ack {"status":"sent"|"error"}
+Termux cron / MacroDroid (toutes les 10 min)
+  → GET /api/cabinet/sms/queue          (récupère les SMS préparés)
+  → Envoie chaque SMS via antenne Android
+  → POST /api/cabinet/sms/queue/{id}/ack (marque status=sent ou error)
   → Grav met à jour status + sent_at ou error_at
 ```
+
+### Endpoint ACK — statuts supportés
+
+| Body envoyé | Effet côté serveur |
+|---|---|
+| `{"status": "sent"}` | `status=sent`, `sent_at=<horodatage>` |
+| `{"status": "error", "error": "raison"}` | `status=error`, `error_at=<horodatage>`, `error_message=<raison>` |
+
+### Retrouver les SMS envoyés
+
+Dans l'onglet **Communication** de chaque client, les SMS passent automatiquement de `prepared` → `sent` après l'ack. Le champ `sent_at` contient l'horodatage exact.
 
 ---
 

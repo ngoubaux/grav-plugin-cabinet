@@ -111,8 +111,8 @@ form:
       options:
         smsmobileapi: SMSMobileAPI (payant)
         simple_sms_gateway: Simple SMS Gateway (téléphone proxy)
-        macrodroid: MacroDroid (file d'attente — gratuit, sans serveur)
-      help: "Choisissez le mode d'envoi SMS. MacroDroid écrit les SMS dans une file d'attente que votre téléphone Android récupère et envoie via MacroDroid."
+        android_queue: Android natif — file d'attente SMS (MacroDroid ou Termux)
+      help: "Choisissez le mode d'envoi SMS. android_queue écrit les SMS dans une file d'attente que votre téléphone Android récupère et envoie via MacroDroid ou Termux."
 
     sms_simple_gateway_url:
       type: text
@@ -120,10 +120,10 @@ form:
       help: "Endpoint HTTP de votre passerelle téléphone (ex: https://.../send-sms). Le payload envoyé est {to, message}."
       placeholder: https://votre-passerelle.example/send-sms
 
-    sms_simple_gateway_token:
+    sms_push_token:
       type: text
-      label: Token Bearer Simple SMS Gateway (optionnel)
-      help: "Si renseigné, envoyé dans l'entête Authorization: Bearer <token>."
+      label: Token Bearer providers push (optionnel)
+      help: "Partagé entre Simple SMS Gateway (Authorization: Bearer) et Android natif (X-Api-Key dans les scripts Termux/MacroDroid). Si vide, le script Android utilise la Clé API principale."
       placeholder: token-optionnel
 
     sms_rappel_cron:
