@@ -195,8 +195,12 @@ class CabinetPlugin extends Plugin
     public static function runSmsRappels(): void
     {
         require_once __DIR__ . '/classes/Core.php';
+        require_once __DIR__ . '/classes/Communication.php';
         require_once __DIR__ . '/classes/Sms.php';
         $core = new \Grav\Plugin\Cabinet\Core();
+        // Boot Communication so its Flex directory auto-register is available
+        // to queueViaMacroDroid() when sms_provider=macrodroid.
+        new \Grav\Plugin\Cabinet\Communication($core);
         $sms  = new \Grav\Plugin\Cabinet\Sms($core);
         $results = $sms->sendRappelsJ1();
         $core->debugLog('SMS rappels J-1', $results);

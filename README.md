@@ -398,108 +398,98 @@ sms_enabled: true
 sms_provider: 'macrodroid'
 ```
 
-### Créer le macro MacroDroid — copier/coller
+### Créer le macro MacroDroid — pas à pas
 
-Dans MacroDroid : **Mes Macros → +** puis configurer comme suit.
-
----
-
-#### Déclencheur (Trigger)
-
-```
-Type : Minuteur périodique
-Intervalle : 10 minutes
-```
+Dans MacroDroid : appuyer sur **+** (bas de l'écran) → **Créer un macro** → donner un nom (ex : *Cabinet SMS*).
 
 ---
 
-#### Action 1 — Récupérer la file d'attente
+#### Déclencheur
 
-```
-Type   : Networking → Requête HTTP
-Méthode: GET
-URL    : https://VOTRE_SITE/api/cabinet/sms/queue
-
-En-têtes :
-  Authorization : Bearer VOTRE_API_KEY
-  Accept        : application/json
-
-Variable de réponse : [lv_queue_response]
-```
+1. Appuyer sur **DÉCLENCHEURS → +**
+2. Choisir **Minuterie → Minuterie périodique**
+3. Intervalle : **10 minutes** → OK
 
 ---
 
-#### Action 2 — Extraire le nombre d'éléments
+#### Action 1 — Récupérer la file d'attente SMS
 
-```
-Type    : Variables → Définir variable
-[lv_count] = Expression JSONPath
-  Source : [lv_queue_response]
-  Chemin : $.items.length()
-```
-
----
-
-#### Action 3 — Contrainte (ne rien faire si la file est vide)
-
-```
-Type : Contrainte → Expression
-  [lv_count] > 0
-```
+1. **ACTIONS → +**
+2. **Connectivité → Requête HTTP**
+3. Remplir :
+   - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue`
+   - **Méthode** : `GET`
+4. Appuyer sur l'onglet **En-têtes** → **+** → ajouter :
+   - Clé : `Authorization` / Valeur : `Bearer VOTRE_API_KEY`
+   - Clé : `Accept` / Valeur : `application/json`
+5. Onglet **Réponse** → cocher **Enregistrer la réponse dans une variable** → nom : `queue_response`
+6. OK
 
 ---
 
-#### Action 4 — Boucle sur chaque item
+#### Action 2 — Boucle sur chaque SMS en attente
 
-```
-Type       : Boucles → Pour chaque (tableau JSON)
-Source JSON: [lv_queue_response]
-Chemin JSON: $.items[*]
-Variable   : [lv_item]
-```
-
-**Dans la boucle :**
-
-```
-┌─ Définir variable ─────────────────────────────────┐
-│ [lv_id]      = JSONPath([lv_item], $.id)           │
-│ [lv_to]      = JSONPath([lv_item], $.to)           │
-│ [lv_message] = JSONPath([lv_item], $.message)      │
-└────────────────────────────────────────────────────┘
-
-┌─ Envoyer un SMS ───────────────────────────────────┐
-│ Numéro  : [lv_to]                                  │
-│ Message : [lv_message]                             │
-└────────────────────────────────────────────────────┘
-
-┌─ Requête HTTP (ack) ───────────────────────────────┐
-│ Méthode : POST                                     │
-│ URL     : https://VOTRE_SITE/api/cabinet/sms/      │
-│           queue/[lv_id]/ack                        │
-│ En-têtes:                                          │
-│   Authorization : Bearer VOTRE_API_KEY             │
-│   Content-Type  : application/json                 │
-│ Corps   : {}                                       │
-└────────────────────────────────────────────────────┘
-```
+1. **ACTIONS → +**
+2. **Boucle → Pour chaque**
+3. Dans **Source** choisir **Tableau JSON**
+4. Variable JSON : `{queue_response}` (sélectionner depuis la liste)
+5. Chemin JSONPath : `$.items`
+6. Variable de boucle : `item`
+7. OK
 
 ---
 
-#### Action 5 — Fin de boucle
+#### Action 3 — (dans la boucle) Extraire les champs
 
-```
-Type : Boucles → Fin de boucle
-```
+1. **ACTIONS → +**
+2. **Variables → Définir une variable**
+3. Créer la variable `sms_id`
+   - Type de valeur : **Expression JSONPath**
+   - JSON : `{item}`
+   - Chemin : `$.id`
+4. Répéter pour `sms_to` (chemin `$.to`) et `sms_message` (chemin `$.message`)
 
 ---
 
-#### Action 6 — Notification (optionnel)
+#### Action 4 — (dans la boucle) Envoyer le SMS
 
-```
-Type  : Notifications → Créer une notification
-Titre : SMS Cabinet
-Texte : [lv_count] SMS envoyé(s) ✓
-```
+1. **ACTIONS → +**
+2. **Messages → Envoyer un SMS**
+3. **Numéro** : `{sms_to}`
+4. **Message** : `{sms_message}`
+5. OK
+
+---
+
+#### Action 5 — (dans la boucle) Confirmer l'envoi (ack)
+
+1. **ACTIONS → +**
+2. **Connectivité → Requête HTTP**
+3. Remplir :
+   - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue/{sms_id}/ack`
+   - **Méthode** : `POST`
+4. Onglet **En-têtes** → **+** :
+   - `Authorization` : `Bearer VOTRE_API_KEY`
+   - `Content-Type` : `application/json`
+5. Onglet **Corps** → `{}`
+6. OK
+
+---
+
+#### Action 6 — Fin de boucle
+
+1. **ACTIONS → +**
+2. **Boucle → Fin de boucle**
+
+---
+
+#### Action 7 — Notification (optionnel)
+
+1. **ACTIONS → +**
+2. **Notifications → Créer une notification**
+3. **Titre** : `SMS Cabinet`
+4. **Texte** : `SMS envoyés ✓`
+5. OK
 
 ---
 
