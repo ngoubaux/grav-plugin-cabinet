@@ -11,7 +11,6 @@
   {{ parent() }}
   {% do assets.addJs('https://apis.google.com/js/api.js', {group: 'head', loading: 'defer'}) %}
   {% do assets.addJs('https://accounts.google.com/gsi/client', {group: 'head', loading: 'async'}) %}
-  {% do assets.addJs('https://cdn.jsdelivr.net/npm/alpinejs@3/dist/cdn.min.js', {group: 'head', loading: 'defer'}) %}
   {# utils — chargés en premier, pas de dépendances entre eux #}
   {% do assets.addJs('/cabinet/utils/constants.js?v=' ~ cab_ver, {group: 'bottom', priority: 22}) %}
   {% do assets.addJs('/cabinet/utils/helpers.js?v=' ~ cab_ver,   {group: 'bottom', priority: 20}) %}
