@@ -1,0 +1,136 @@
+{% autoescape false %}#!/data/data/com.termux/files/usr/bin/env python3
+# termux-sms-queue.py — généré par Cabinet (Grav) le {{ generated_at }}
+
+import json
+import logging
+import subprocess
+import sys
+from pathlib import Path
+from urllib.request import Request, urlopen
+from urllib.error import HTTPError, URLError
+
+# ── Configuration (injectée par Grav) ────────────────────────────────────────
+CABINET_URL = "{{ cabinet_url }}"
+API_KEY     = "{{ api_key }}"
+SIM_SLOT    = "{{ sim_slot }}"   # "" = SIM par défaut | "0" | "1"
+LOG_FILE    = Path.home() / "sms-queue.log"
+MAX_LOG_BYTES = 500_000          # rotation à ~500 KB
+TIMEOUT     = 15                 # secondes
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def setup_logging() -> None:
+    if LOG_FILE.exists() and LOG_FILE.stat().st_size > MAX_LOG_BYTES:
+        lines = LOG_FILE.read_text(encoding="utf-8").splitlines()
+        LOG_FILE.write_text("\n".join(lines[len(lines) // 2:]) + "\n", encoding="utf-8")
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(asctime)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        handlers=[
+            logging.FileHandler(LOG_FILE, encoding="utf-8"),
+            logging.StreamHandler(sys.stdout),
+        ],
+    )
+
+
+def api_get(path: str) -> dict:
+    req = Request(f"{CABINET_URL}{path}")
+    req.add_header("X-Api-Key", API_KEY)
+    req.add_header("Accept", "application/json")
+    try:
+        with urlopen(req, timeout=TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise RuntimeError(f"HTTP {exc.code} — {path}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Réseau — {path} : {exc.reason}") from exc
+
+
+def api_post(path: str, payload: dict | None = None) -> dict:
+    body = json.dumps(payload or {}).encode("utf-8")
+    req = Request(f"{CABINET_URL}{path}", data=body, method="POST")
+    req.add_header("X-Api-Key", API_KEY)
+    req.add_header("Content-Type", "application/json")
+    try:
+        with urlopen(req, timeout=TIMEOUT) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise RuntimeError(f"HTTP {exc.code} — {path}") from exc
+    except URLError as exc:
+        raise RuntimeError(f"Réseau — {path} : {exc.reason}") from exc
+
+
+def send_sms(to: str, message: str) -> bool:
+    cmd = ["termux-sms-send", "-n", to]
+    if SIM_SLOT:
+        cmd += ["-s", SIM_SLOT]
+    cmd.append(message)
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        logging.error("termux-sms-send : %s", result.stderr.strip() or "erreur inconnue")
+        return False
+    return True
+
+
+def main() -> None:
+    setup_logging()
+    logging.info("--- Démarrage ---")
+
+    try:
+        data = api_get("/api/cabinet/sms/queue")
+    except RuntimeError as exc:
+        logging.error("Impossible de récupérer la file : %s", exc)
+        sys.exit(1)
+
+    items = data.get("items", [])
+    logging.info("%d SMS en attente", len(items))
+
+    if not items:
+        logging.info("File vide.")
+        return
+
+    sent = failed = 0
+
+    for item in items:
+        item_id = item.get("id", "")
+        to      = item.get("to", "")
+        message = item.get("message", "")
+
+        if not (item_id and to and message):
+            logging.warning("SKIP item malformé : %s", item)
+            continue
+
+        logging.info("Envoi SMS id=%s vers %s", item_id, to)
+
+        if not send_sms(to, message):
+            logging.error("Échec envoi SMS id=%s", item_id)
+            try:
+                api_post(
+                    f"/api/cabinet/sms/queue/{item_id}/ack",
+                    {"status": "error", "error": "termux-sms-send a échoué"},
+                )
+                logging.info("ACK id=%s → statut 'error'", item_id)
+            except RuntimeError as exc:
+                logging.warning("ACK error échoué id=%s : %s", item_id, exc)
+            failed += 1
+            continue
+
+        logging.info("SMS id=%s envoyé", item_id)
+
+        try:
+            api_post(f"/api/cabinet/sms/queue/{item_id}/ack", {"status": "sent"})
+            logging.info("ACK id=%s → statut 'sent'", item_id)
+            sent += 1
+        except RuntimeError as exc:
+            logging.warning("ACK sent échoué id=%s : %s", item_id, exc)
+            failed += 1
+
+    logging.info("Terminé — %d envoyé(s), %d échec(s)", sent, failed)
+
+
+if __name__ == "__main__":
+    main()
+{% endautoescape %}

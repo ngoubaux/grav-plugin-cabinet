@@ -175,7 +175,7 @@ class Api
 
         if ($path === '/api/cabinet/termux/sms-queue' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
-            $this->serveTermuxScript('termux-sms-queue.sh.twig', 'termux-sms-queue.sh');
+            $this->serveTermuxScript('termux-sms-queue.py.twig', 'termux-sms-queue.py');
         }
 
         $this->core->jsonExit(['error' => 'Route not found'], 404);

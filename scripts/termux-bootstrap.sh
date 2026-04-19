@@ -19,7 +19,7 @@ API_KEY="CHANGE_ME_BEFORE_DEPLOY"      # cabinet.yaml → api_key
 SIM_SLOT=""                            # "" | "0" | "1"
 CRON_INTERVAL="*/10 * * * *"
 
-SCRIPT_NAME="termux-sms-queue.sh"
+SCRIPT_NAME="termux-sms-queue.py"
 SCRIPT_DIR="$HOME/scripts"
 SCRIPT_PATH="$SCRIPT_DIR/$SCRIPT_NAME"
 BOOT_DIR="$HOME/.termux/boot"
@@ -131,5 +131,5 @@ info "Cron    : $CRON_INTERVAL"
 [ -n "$SIM_SLOT" ] && info "SIM     : slot $SIM_SLOT" || info "SIM     : défaut"
 echo
 green "Lancer manuellement pour tester :"
-echo "  bash $SCRIPT_PATH"
+echo "  python3 $SCRIPT_PATH"
 echo
