@@ -10,6 +10,7 @@ const cabStore = {
   communications: {},
   activeId: null,
   activeTab: 'fiche',
+  showHelp: false,
   smsEnabled: false,
   driveBilanPath: 'onyx/NoteAir5c/Cahiers/clients',
   driveConnected: false,
@@ -133,6 +134,7 @@ const cabStore = {
     }
     this.activeId=resolved;
     this.activeTab='fiche';
+    this.showHelp=false;
     this.bilanFile=undefined;
     delete _bilanFileCache[resolved];
     this.initCommunicationDraft('sms');

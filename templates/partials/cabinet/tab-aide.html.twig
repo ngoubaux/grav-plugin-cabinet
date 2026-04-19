@@ -1,0 +1,307 @@
+{% set help_url     = base_url_absolute %}
+{% set help_key     = config.plugins.cabinet.api_key %}
+{% set help_prov    = config.plugins.cabinet.sms_provider %}
+{% set help_enabled = config.plugins.cabinet.sms_enabled %}
+{% set help_key_ok  = help_key and help_key != 'CHANGE_ME_BEFORE_DEPLOY' %}
+
+<div x-show="$store.cab.showHelp" class="help-wrap"
+     x-data="{
+       open: 'termux',
+       async copy(text, el) {
+         try { await navigator.clipboard.writeText(text); } catch(e) {}
+         const o = el.textContent;
+         el.textContent = '✓ Copié';
+         setTimeout(() => el.textContent = o, 1800);
+       }
+     }">
+
+  {{# ── En-tête ── #}}
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+    <div class="section-label" style="margin:0">Guide de configuration</div>
+    <button class="btn-ghost btn-sm" @click="$store.cab.showHelp=false">✕ Fermer</button>
+  </div>
+
+  {{# ── État de la configuration ── #}}
+  <div class="help-config-bar">
+    <div class="help-config-item">
+      <span class="help-config-label">SMS</span>
+      {% if help_enabled %}
+        <span class="help-chip help-chip-ok">Activé</span>
+      {% else %}
+        <span class="help-chip help-chip-warn">Désactivé</span>
+      {% endif %}
+    </div>
+    <div class="help-config-item">
+      <span class="help-config-label">Provider</span>
+      <span class="help-config-val">{{ help_prov ?: '—' }}</span>
+    </div>
+    <div class="help-config-item">
+      <span class="help-config-label">Clé API</span>
+      {% if help_key_ok %}
+        <span class="help-chip help-chip-ok">Configurée</span>
+        <span class="help-config-val" style="font-size:10px;opacity:.6">{{ help_key|slice(0,6) }}…</span>
+      {% else %}
+        <span class="help-chip help-chip-error">Non configurée</span>
+      {% endif %}
+    </div>
+    {% if not help_enabled or not help_key_ok %}
+    <a href="/admin/plugins/cabinet" class="help-chip help-chip-warn" style="text-decoration:none;cursor:pointer">
+      ⚙️ Ouvrir les réglages
+    </a>
+    {% endif %}
+  </div>
+
+  {{# ── Section : Termux + Cron ── #}}
+  <div class="help-section">
+    <div class="help-section-head" @click="open = open==='termux' ? null : 'termux'">
+      <span class="help-section-title">📱 Termux + Cron <span class="help-chip help-chip-ok" style="font-size:10px">Recommandé</span></span>
+      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='termux' ? '▲' : '▼'"></span>
+    </div>
+    <div class="help-section-body" x-show="open==='termux'">
+
+      <div class="help-note">
+        Script Python cron sur votre téléphone Android.
+        <strong>Aucun compte, aucune app tierce.</strong>
+        Nécessite Termux + Termux:API (F-Droid) et le provider
+        <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">macrodroid</code>
+        dans les réglages.
+      </div>
+
+      <ol class="help-steps">
+        <li class="help-step">
+          <div class="help-step-num">1</div>
+          <div class="help-step-content">
+            Installer <strong>Termux</strong> et <strong>Termux:API</strong> depuis
+            <a href="https://f-droid.org" target="_blank" rel="noopener" style="color:var(--cab-accent)">F-Droid</a>
+            (pas depuis le Play Store — version Play Store obsolète).
+            <small>Ouvrir Termux:API au moins une fois après installation.</small>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">2</div>
+          <div class="help-step-content">
+            Dans Termux, lancer la commande d'installation en une seule fois :
+            <div class="help-cmd">
+              <code>curl -fsSL "{{ help_url }}/api/cabinet/termux/bootstrap" \
+     -H "X-Api-Key: {{ help_key }}" | bash</code>
+              <button class="help-cmd-copy"
+                      @click="copy(`curl -fsSL '{{ help_url }}/api/cabinet/termux/bootstrap' -H 'X-Api-Key: {{ help_key }}' | bash`, $el)">
+                Copier
+              </button>
+            </div>
+            <small>Pour multi-SIM, ajouter <code>?sim=0</code> ou <code>?sim=1</code> à l'URL.</small>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">3</div>
+          <div class="help-step-content">
+            Le script installe automatiquement : <code style="font-size:11px">python</code>, <code style="font-size:11px">cronie</code>,
+            <code style="font-size:11px">termux-api</code>, configure le cron toutes les 10 min et
+            gère le redémarrage Android via Termux:Boot.
+            <small>Installer l'app <strong>Termux:Boot</strong> depuis F-Droid pour que crond redémarre automatiquement.</small>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">4</div>
+          <div class="help-step-content">
+            Tester manuellement l'envoi depuis Termux :
+            <div class="help-cmd">
+              <code>python3 ~/scripts/termux-sms-queue.py</code>
+              <button class="help-cmd-copy" @click="copy('python3 ~/scripts/termux-sms-queue.py', $el)">Copier</button>
+            </div>
+            <small>Les logs sont dans <code>~/sms-queue.log</code>.</small>
+          </div>
+        </li>
+      </ol>
+
+      <div class="help-divider"></div>
+
+      <div style="font-size:12px;color:var(--cab-text-sec)">
+        <strong style="color:var(--cab-text)">Flux :</strong>
+        Communication créée → <code style="font-size:11px">status=prepared</code> →
+        Termux envoie via antenne Android → <code style="font-size:11px">status=sent</code> ou <code style="font-size:11px">error</code>
+      </div>
+    </div>
+  </div>
+
+  {{# ── Section : MacroDroid ── #}}
+  <div class="help-section">
+    <div class="help-section-head" @click="open = open==='macrodroid' ? null : 'macrodroid'">
+      <span class="help-section-title">🤖 MacroDroid</span>
+      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='macrodroid' ? '▲' : '▼'"></span>
+    </div>
+    <div class="help-section-body" x-show="open==='macrodroid'">
+
+      <div class="help-note">
+        Alternative sans ligne de commande : macro visuelle sur Android.
+        <strong>Aucun compte.</strong>
+        Même provider <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">macrodroid</code> que Termux.
+      </div>
+
+      <ol class="help-steps">
+        <li class="help-step">
+          <div class="help-step-num">1</div>
+          <div class="help-step-content">
+            Installer <strong>MacroDroid</strong> depuis le Play Store. Créer un nouveau macro
+            <em>Cabinet SMS</em> avec un déclencheur <strong>Minuterie périodique → 10 min</strong>.
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">2</div>
+          <div class="help-step-content">
+            Action 1 — <strong>Requête HTTP GET</strong> pour récupérer la file :
+            <div class="help-cmd">
+              <code>GET {{ help_url }}/api/cabinet/sms/queue
+En-tête : X-Api-Key → {{ help_key }}
+Réponse → variable : queue_response</code>
+              <button class="help-cmd-copy"
+                      @click="copy(`{{ help_url }}/api/cabinet/sms/queue`, $el)">
+                Copier URL
+              </button>
+            </div>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">3</div>
+          <div class="help-step-content">
+            Action 2 — <strong>Boucle Pour chaque</strong> : source = tableau JSON,
+            variable JSON = <code>{queue_response}</code>, JSONPath = <code>$.items</code>,
+            variable de boucle = <code>item</code>.
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">4</div>
+          <div class="help-step-content">
+            Dans la boucle — extraire <code>$.id</code> → <code>sms_id</code>,
+            <code>$.to</code> → <code>sms_to</code>, <code>$.message</code> → <code>sms_message</code>
+            via <strong>Variables → Définir (JSONPath)</strong>.
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">5</div>
+          <div class="help-step-content">
+            <strong>Messages → Envoyer un SMS</strong> : numéro = <code>{sms_to}</code>,
+            message = <code>{sms_message}</code>.
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">6</div>
+          <div class="help-step-content">
+            <strong>Requête HTTP POST</strong> pour confirmer l'envoi (ACK) :
+            <div class="help-cmd">
+              <code>POST {{ help_url }}/api/cabinet/sms/queue/{sms_id}/ack
+En-tête : X-Api-Key → {{ help_key }}
+Corps : {"status":"sent"}</code>
+              <button class="help-cmd-copy"
+                      @click="copy(`{{ help_url }}/api/cabinet/sms/queue/`, $el)">
+                Copier URL base
+              </button>
+            </div>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">7</div>
+          <div class="help-step-content">
+            Terminer par une <strong>Fin de boucle</strong> et optionnellement
+            une notification <em>SMS Cabinet envoyés ✓</em>.
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  {{# ── Section : Clé API ── #}}
+  <div class="help-section">
+    <div class="help-section-head" @click="open = open==='apikey' ? null : 'apikey'">
+      <span class="help-section-title">🔑 Clé API</span>
+      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='apikey' ? '▲' : '▼'"></span>
+    </div>
+    <div class="help-section-body" x-show="open==='apikey'">
+
+      <p style="font-size:13px;margin-bottom:12px;line-height:1.6">
+        La clé API (<code style="font-size:11px;background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px">X-Api-Key</code>)
+        permet aux scripts externes (Termux, MacroDroid) d'accéder à l'API sans session Grav.
+        Elle doit être longue, aléatoire et gardée secrète.
+      </p>
+
+      <div class="help-cmd">
+        <code>{{ help_key }}</code>
+        <button class="help-cmd-copy" @click="copy('{{ help_key }}', $el)">Copier</button>
+      </div>
+
+      <ol class="help-steps" style="margin-top:12px">
+        <li class="help-step">
+          <div class="help-step-num">1</div>
+          <div class="help-step-content">
+            Pour changer la clé, aller dans <a href="/admin/plugins/cabinet" style="color:var(--cab-accent)">
+            Plugins → Cabinet → Clé API</a> et saisir une nouvelle valeur.
+            <small>Exemple de génération : <code>openssl rand -hex 32</code> dans un terminal.</small>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">2</div>
+          <div class="help-step-content">
+            Après changement, retélécharger les scripts Termux pour que la nouvelle clé soit injectée :
+            <div class="help-cmd">
+              <code>curl -fsSL "{{ help_url }}/api/cabinet/termux/bootstrap" \
+     -H "X-Api-Key: NOUVELLE_CLE" | bash</code>
+            </div>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">3</div>
+          <div class="help-step-content">
+            Mettre à jour la clé dans le macro MacroDroid si vous l'utilisez
+            (en-têtes des deux requêtes HTTP).
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  {{# ── Section : Rappels SMS J-1 ── #}}
+  <div class="help-section">
+    <div class="help-section-head" @click="open = open==='rappels' ? null : 'rappels'">
+      <span class="help-section-title">⏰ Rappels automatiques J-1</span>
+      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='rappels' ? '▲' : '▼'"></span>
+    </div>
+    <div class="help-section-body" x-show="open==='rappels'">
+
+      <div class="help-note">
+        Le scheduler Grav envoie un SMS de rappel la veille de chaque rendez-vous.
+        Nécessite <strong>sms_enabled: true</strong> et le scheduler Grav actif sur le serveur.
+      </div>
+
+      <ol class="help-steps">
+        <li class="help-step">
+          <div class="help-step-num">1</div>
+          <div class="help-step-content">
+            Activer SMS dans les réglages (<strong>sms_enabled → Oui</strong>)
+            et choisir un provider.
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">2</div>
+          <div class="help-step-content">
+            Ajouter le scheduler Grav au cron <strong>du serveur</strong> :
+            <div class="help-cmd">
+              <code>* * * * * cd /chemin/vers/grav && php bin/grav scheduler 1>> /dev/null 2>&1</code>
+              <button class="help-cmd-copy"
+                      @click="copy('* * * * * cd /chemin/vers/grav && php bin/grav scheduler 1>> /dev/null 2>&1', $el)">
+                Copier
+              </button>
+            </div>
+            <small>Vérifier dans <strong>Outils → Scheduler</strong> que le job <code>cabinet-sms-rappels</code> apparaît.</small>
+          </div>
+        </li>
+        <li class="help-step">
+          <div class="help-step-num">3</div>
+          <div class="help-step-content">
+            Par séance, cocher <strong>"Désactiver le rappel SMS J-1"</strong> pour exclure un rendez-vous spécifique.
+          </div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+</div>
