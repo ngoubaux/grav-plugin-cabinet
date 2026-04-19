@@ -167,7 +167,55 @@ class Api
             $this->communication->ackSmsQueueItem(rawurldecode($m[1]));
         }
 
+        // ── Scripts Termux pré-configurés ─────────────────────────────────────
+        if ($path === '/api/cabinet/termux/bootstrap' && $method === 'GET') {
+            $this->core->requireSessionOrApiKey();
+            $this->serveTermuxScript('termux-bootstrap.sh.twig', 'termux-bootstrap.sh');
+        }
+
+        if ($path === '/api/cabinet/termux/sms-queue' && $method === 'GET') {
+            $this->core->requireSessionOrApiKey();
+            $this->serveTermuxScript('termux-sms-queue.sh.twig', 'termux-sms-queue.sh');
+        }
+
         $this->core->jsonExit(['error' => 'Route not found'], 404);
+    }
+
+    private function serveTermuxScript(string $template, string $filename): void
+    {
+        $grav    = Grav::instance();
+        $baseUrl = rtrim((string) ($grav['base_url_absolute'] ?? ''), '/');
+        $apiKey  = (string) $grav['config']->get('plugins.cabinet.api_key', '');
+        $simSlot = (string) ($grav['uri']->query('sim') ?? '');
+
+        $vars = [
+            'cabinet_url'  => $baseUrl,
+            'api_key'      => $apiKey,
+            'sim_slot'     => $simSlot,
+            'generated_at' => date('d/m/Y H:i'),
+        ];
+
+        $templateFile = dirname(__DIR__) . '/templates/' . $template;
+        if (!file_exists($templateFile)) {
+            http_response_code(404);
+            echo '# Template introuvable : ' . $template;
+            exit;
+        }
+
+        try {
+            $script = $grav['twig']->twig->render($template, $vars);
+        } catch (\Throwable $e) {
+            // Fallback : substitution simple si Twig n'est pas encore initialisé
+            $script = file_get_contents($templateFile);
+            foreach ($vars as $key => $value) {
+                $script = str_replace('{{ ' . $key . ' }}', $value, $script);
+            }
+        }
+
+        header('Content-Type: text/x-shellscript; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+        echo $script;
+        exit;
     }
 
     private function serveAsset(string $name, string $type): void
