@@ -10,6 +10,7 @@ class Sms
     private const DEFAULT_PROVIDER = 'smsmobileapi';
     private const SIMPLE_GATEWAY_PROVIDER = 'simple_sms_gateway';
     private const LEGACY_HTTP_GATEWAY_PROVIDER = 'http_gateway';
+    private const MACRODROID_PROVIDER = 'macrodroid';
 
     /** @var \Grav\Plugin\Cabinet\Core */
     private $core;
@@ -36,11 +37,66 @@ class Sms
         $this->core->debugLog('SMS send', ['to' => $phone, 'len' => strlen($message)]);
 
         $provider = $this->getProvider();
+
+        if ($provider === self::MACRODROID_PROVIDER) {
+            return $this->queueViaMacroDroid($phone, $message);
+        }
+
         if ($provider === self::SIMPLE_GATEWAY_PROVIDER || $provider === self::LEGACY_HTTP_GATEWAY_PROVIDER) {
             return $this->sendViaSimpleGateway($phone, $message);
         }
 
         return $this->sendViaSmsMobileApi($phone, $message);
+    }
+
+    /**
+     * MacroDroid provider: write a `prepared` SMS into the communications queue.
+     * MacroDroid polls GET /api/cabinet/sms/queue, sends via Android SMS radio,
+     * then calls POST /api/cabinet/sms/queue/{id}/ack to mark it sent.
+     *
+     * @return array{ok: bool, queued?: bool, error?: string}
+     */
+    private function queueViaMacroDroid(string $phone, string $message): array
+    {
+        $grav = Grav::instance();
+        $flex = $grav['flex'] ?? null;
+        if (!$flex) {
+            return ['ok' => false, 'error' => 'Flex Objects non disponible'];
+        }
+
+        $dir = $flex->getDirectory('communications');
+        if (!$dir) {
+            // Try to register the directory from the blueprint.
+            $blueprint = dirname(__DIR__) . '/blueprints/flex-objects/communications.yaml';
+            if (file_exists($blueprint)) {
+                try {
+                    $flex->addDirectoryType('communications', $blueprint);
+                } catch (\Throwable $e) {
+                    $this->core->debugLog('macrodroid queue: addDirectoryType failed', ['error' => $e->getMessage()]);
+                }
+            }
+            $dir = $flex->getDirectory('communications');
+        }
+
+        if (!$dir) {
+            return ['ok' => false, 'error' => 'Communications directory unavailable'];
+        }
+
+        $id  = substr(sha1($phone . '|' . $message . '|' . microtime(true)), 0, 32);
+        $obj = $dir->createObject([], $id);
+        $obj->published   = true;
+        $obj->channel     = 'sms';
+        $obj->to          = $phone;
+        $obj->message     = $message;
+        $obj->status      = 'prepared';
+        $obj->created_at  = date('c');
+        $obj->transport   = 'macrodroid';
+        $obj->client_uuid = '';
+        $obj->save();
+
+        $this->core->debugLog('SMS queued for MacroDroid', ['id' => $id, 'to' => $phone]);
+
+        return ['ok' => true, 'queued' => true];
     }
 
     private function sendViaSmsMobileApi(string $phone, string $message): array

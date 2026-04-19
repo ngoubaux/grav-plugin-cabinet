@@ -111,7 +111,8 @@ form:
       options:
         smsmobileapi: SMSMobileAPI (payant)
         simple_sms_gateway: Simple SMS Gateway (téléphone proxy)
-      help: "Choisissez le mode d'envoi SMS. Simple SMS Gateway permet d'utiliser un téléphone Android comme proxy SMS."
+        macrodroid: MacroDroid (file d'attente — gratuit, sans serveur)
+      help: "Choisissez le mode d'envoi SMS. MacroDroid écrit les SMS dans une file d'attente que votre téléphone Android récupère et envoie via MacroDroid."
 
     sms_simple_gateway_url:
       type: text
