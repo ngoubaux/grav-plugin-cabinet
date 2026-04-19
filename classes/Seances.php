@@ -12,13 +12,18 @@ class Seances
     /** @var \Grav\Plugin\Cabinet\Facturation */
     private $facturation;
 
+    /** @var \Grav\Plugin\Cabinet\Communication */
+    private $communication;
+
     public function __construct(
         \Grav\Plugin\Cabinet\Core $core,
-        \Grav\Plugin\Cabinet\Facturation $facturation
+        \Grav\Plugin\Cabinet\Facturation $facturation,
+        \Grav\Plugin\Cabinet\Communication $communication
     )
     {
         $this->core = $core;
         $this->facturation = $facturation;
+        $this->communication = $communication;
     }
 
     public function getData(): void
@@ -38,6 +43,7 @@ class Seances
         return [
             'clients' => $data['clients'],
             'sessions' => $data['sessions'],
+            'communications' => $data['communications'],
             'rendez_vous' => $rendezVous,
             'rendez_vous_by_day' => $this->indexByDay($rendezVous),
             'facturation' => $facturation,
@@ -46,6 +52,10 @@ class Seances
                 'google_calendar_id'     => (string) $config->get('plugins.cabinet.google_calendar_id', ''),
                 'drive_bilan_path'       => (string) $config->get('plugins.cabinet.drive_bilan_path', 'onyx/NoteAir5c/Cahiers/clients'),
                 'sms_enabled'            => (bool)   $config->get('plugins.cabinet.sms_enabled', false),
+                'communication_google_review_url'       => (string) $config->get('plugins.cabinet.communication_google_review_url', ''),
+                'communication_template_prep_visite'    => (string) $config->get('plugins.cabinet.communication_template_prep_visite', ''),
+                'communication_template_relance'        => (string) $config->get('plugins.cabinet.communication_template_relance', ''),
+                'communication_template_compte_rendu'   => (string) $config->get('plugins.cabinet.communication_template_compte_rendu', ''),
             ],
         ];
     }
@@ -122,6 +132,7 @@ class Seances
         if ($contact && method_exists($contact, 'delete')) {
             $contact->delete();
         }
+        $this->communication->deleteCommunicationsForClient($uuid);
         $this->core->jsonExit(['ok' => true]);
     }
 
@@ -293,11 +304,13 @@ class Seances
         }
 
         $appointmentsFromRendezVous = $this->recordsToClientAppointmentsIndex($rendezVousRecords);
+        $communicationsByClient = $this->communication->communicationsByClient();
 
         if (!$clientsDir) {
             return [
                 'clients' => [],
                 'sessions' => $sessions,
+                'communications' => $communicationsByClient,
                 'rendez_vous_records' => $rendezVousRecords,
             ];
         }
@@ -327,9 +340,11 @@ class Seances
         return [
             'clients' => $clients,
             'sessions' => $sessions,
+            'communications' => $communicationsByClient,
             'rendez_vous_records' => $rendezVousRecords,
         ];
     }
+
 
     private function flexObjectToArray($object): array
     {

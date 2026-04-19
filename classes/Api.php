@@ -12,6 +12,9 @@ class Api
     /** @var \Grav\Plugin\Cabinet\Clients */
     private $clients;
 
+    /** @var \Grav\Plugin\Cabinet\Communication */
+    private $communication;
+
     /** @var \Grav\Plugin\Cabinet\Seances */
     private $seances;
 
@@ -24,12 +27,14 @@ class Api
     public function __construct(
         \Grav\Plugin\Cabinet\Core $core,
         \Grav\Plugin\Cabinet\Clients $clients,
+        \Grav\Plugin\Cabinet\Communication $communication,
         \Grav\Plugin\Cabinet\Seances $seances,
         \Grav\Plugin\Cabinet\Facturation $facturation,
         \Grav\Plugin\Cabinet\Sms $sms
     ) {
         $this->core = $core;
         $this->clients = $clients;
+        $this->communication = $communication;
         $this->seances = $seances;
         $this->facturation = $facturation;
         $this->sms = $sms;
@@ -113,6 +118,13 @@ class Api
             if ($method === 'DELETE') $this->seances->deleteRendezvousRecord($id);
         }
 
+        // ── Communications (history) ───────────────────────────────────────
+        if (preg_match('#^/api/cabinet/communications/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
+            $this->core->requireSessionOrApiKey();
+            $id = rawurldecode($m[1]);
+            if ($method === 'PUT') $this->communication->updateClientCommunicationsRecord($id);
+        }
+
         if ($path === '/api/cabinet/rendezvous' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
             $this->core->jsonExit($this->seances->buildRendezVousPayload());
@@ -132,6 +144,11 @@ class Api
         if ($path === '/api/cabinet/sms/preparation' && $method === 'POST') {
             $this->core->requireGravSession();
             $this->sms->handleSendPreparation();
+        }
+
+        if ($path === '/api/cabinet/sms/send-preparation' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->sms->handleSendPreparationDirect();
         }
 
         if ($path === '/api/cabinet/sms/rappels' && $method === 'POST') {

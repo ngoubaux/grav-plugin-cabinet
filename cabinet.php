@@ -6,6 +6,7 @@ use Grav\Common\Plugin;
 use Grav\Events\FlexRegisterEvent;
 use RocketTheme\Toolbox\Event\Event;
 use Grav\Plugin\Cabinet\Api;
+use Grav\Plugin\Cabinet\Communication;
 use Grav\Plugin\Cabinet\Clients;
 use Grav\Plugin\Cabinet\Core;
 use Grav\Plugin\Cabinet\Facturation;
@@ -14,6 +15,7 @@ use Grav\Plugin\Cabinet\Sms;
 
 require_once __DIR__ . '/classes/Core.php';
 require_once __DIR__ . '/classes/Api.php';
+require_once __DIR__ . '/classes/Communication.php';
 require_once __DIR__ . '/classes/Clients.php';
 require_once __DIR__ . '/classes/Seances.php';
 require_once __DIR__ . '/classes/Facturation.php';
@@ -31,6 +33,9 @@ class CabinetPlugin extends Plugin
 
     /** @var Clients|null */
     private $clients;
+
+    /** @var Communication|null */
+    private $communication;
 
     /** @var Seances|null */
     private $seances;
@@ -50,6 +55,7 @@ class CabinetPlugin extends Plugin
             'onGetPageBlueprints'       => ['onGetPageBlueprints', 0],
             'onGetPageTemplates'        => ['onGetPageTemplates', 0],
             'onSchedulerInitialized'    => ['onSchedulerInitialized', 0],
+            'onAdminMenu'               => ['onAdminMenu', 0],
             FlexRegisterEvent::class    => ['onRegisterFlex', 0],
         ];
     }
@@ -75,6 +81,7 @@ class CabinetPlugin extends Plugin
         $types = [
             'clients' => __DIR__ . '/blueprints/flex-objects/clients.yaml',
             'rendez_vous' => __DIR__ . '/blueprints/flex-objects/rendez_vous.yaml',
+            'communications' => __DIR__ . '/blueprints/flex-objects/communications.yaml',
         ];
 
         foreach ($types as $type => $blueprint) {
@@ -100,7 +107,14 @@ class CabinetPlugin extends Plugin
 
     public function onAdminMenu(): void
     {
-        // Backward-compatible no-op for stale cached event listeners.
+        if (!$this->isAdmin()) {
+            return;
+        }
+
+        $this->grav['twig']->plugins_hooked_nav['Cabinet'] = [
+            'route' => '/plugins/cabinet',
+            'icon' => 'fa-briefcase',
+        ];
     }
 
     public function onPageInitializedAdmin(): void
@@ -196,13 +210,15 @@ class CabinetPlugin extends Plugin
 
         $this->core = new Core();
         $this->clients = new Clients($this->core);
+        $this->communication = new Communication($this->core);
         $this->facturation = new Facturation($this->core);
-        $this->seances = new Seances($this->core, $this->facturation);
+        $this->seances = new Seances($this->core, $this->facturation, $this->communication);
         $this->sms = new Sms($this->core);
 
         $this->api = new Api(
             $this->core,
             $this->clients,
+            $this->communication,
             $this->seances,
             $this->facturation,
             $this->sms

@@ -1,6 +1,6 @@
 {% extends 'partials/base.html.twig' %}
 
-{% set cab_ver = '20260419-15' %}
+{% set cab_ver = '20260419-21' %}
 
 {% block stylesheets %}
   {{ parent() }}
@@ -40,6 +40,12 @@
     </div>
   </div>
 </section>
+
+<div class="cab-toast-stack" x-data="cabToast">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="cab-toast" :class="t.type==='error' ? 'is-error' : 'is-success'" x-text="t.message"></div>
+  </template>
+</div>
 
 {% include 'partials/cabinet/modals.html.twig' %}
 

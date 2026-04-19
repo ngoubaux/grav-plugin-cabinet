@@ -13,4 +13,14 @@ drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'
 
 sms_enabled: false
 sms_api_key: ''
+sms_provider: 'smsmobileapi'
+sms_simple_gateway_url: ''
+sms_simple_gateway_token: ''
+sms_http_gateway_url: ''
+sms_http_gateway_token: ''
 sms_rappel_cron: '0 8 * * *'
+
+communication_google_review_url: ''
+communication_template_prep_visite: "Bonjour {{first_name}},\n\nAfin de préparer notre première séance{{session_slot}}.\nJe vous partage ce lien : {{preparation_link}}\n\n📍 60 chemin du Val Fleuri 🔐 Code portillon : 2507A 🏢 Bât B6 appt 08, 3ème étage, porte de gauche (\u00e0 droite de la piscine)\n⏱️ Durée : {{duration}} - Tarif : 75€ 👕 Tenue : vêtements souples, chaussettes propres\n\nÀ bientôt, Nicolas\nLe shiatsu est une approche d’accompagnement au bien-être qui ne se substitue pas à un traitement médical."
+communication_template_relance: ''
+communication_template_compte_rendu: "Bonjour {{first_name}},\n\nMerci pour votre confiance suite à notre séance{{session_date_label}}.\n\nSi vous avez trouvé l'accompagnement utile, vous pouvez laisser un avis sur ma fiche Google :\n{{google_review_url}}\n\nVotre retour est précieux et aide d'autres personnes à me trouver.\n\nBien à vous,\nNicolas"
