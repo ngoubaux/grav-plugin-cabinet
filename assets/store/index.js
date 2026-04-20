@@ -20,6 +20,10 @@ const cabStore = {
   searchQuery: '',
   loadState: 'idle',
   loadError: '',
+  pageSize: 20,
+  currentPage: 1,
+  filteredCount: 0,
+  selectedLetter: null,
 
   communicationDraft: {
     channel: 'sms',
@@ -50,6 +54,18 @@ const cabStore = {
   },
 
   // ── Computed ──────────────────────────────────────────────────────────────
+
+  get alphabetLetters() {
+    const q=(this.searchQuery||'').toLowerCase();
+    const norm=(s)=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+    return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter=>{
+      const hasClients=Object.values(this.clients).some(c=>{
+        const matchSearch=!q||(c.last_name+' '+c.first_name+' '+(c.motif||'')).toLowerCase().includes(q);
+        return matchSearch&&norm(c.last_name||'').startsWith(letter);
+      });
+      return {letter, hasClients, selected:this.selectedLetter===letter};
+    });
+  },
 
   get activeClient() { return this.clients[this.activeId]||null; },
   get activeSessions() { return (this.sessions[this.activeId]||[]).slice().reverse(); },
@@ -92,6 +108,8 @@ const cabStore = {
 
   renderList() {
     const q=(this.searchQuery||'').toLowerCase();
+    const letter=this.selectedLetter;
+    const norm=(s)=>String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
     const createdValue=(id)=>{
       const raw=this.clients[id]?.created;
       if(typeof raw==='number'&&Number.isFinite(raw)) return raw;
@@ -103,13 +121,32 @@ const cabStore = {
       }
       return 0;
     };
-    this.clientList=Object.keys(this.clients)
+    const filtered=Object.keys(this.clients)
       .filter(id=>{
         const c=this.clients[id];
-        return (c.last_name+' '+c.first_name+' '+(c.motif||'')).toLowerCase().includes(q);
+        const matchSearch=(c.last_name+' '+c.first_name+' '+(c.motif||'')).toLowerCase().includes(q);
+        const matchLetter=!letter||norm(c.last_name||'').startsWith(letter);
+        return matchSearch&&matchLetter;
       })
-      .sort((a,b)=>createdValue(b)-createdValue(a))
+      .sort((a,b)=>letter
+        ? (this.clients[a].last_name||'').localeCompare(this.clients[b].last_name||'','fr')
+        : createdValue(b)-createdValue(a))
       .map(id=>({...this.clients[id], _id:id, _sessionCount:(this.sessions[id]||[]).length}));
+    this.filteredCount=filtered.length;
+    const start=(this.currentPage-1)*this.pageSize;
+    this.clientList=filtered.slice(start,start+this.pageSize);
+  },
+
+  setLetter(letter) {
+    this.selectedLetter=(this.selectedLetter===letter)?null:letter;
+    this.currentPage=1;
+    this.renderList();
+  },
+
+  goToPage(page) {
+    const total=Math.max(1,Math.ceil(this.filteredCount/this.pageSize));
+    this.currentPage=Math.max(1,Math.min(page,total));
+    this.renderList();
   },
 
   // ── Navigation ────────────────────────────────────────────────────────────

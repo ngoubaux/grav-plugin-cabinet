@@ -50,6 +50,21 @@
 .search-wrap{padding:10px 12px;border-bottom:1px solid var(--cab-border)}
 .search-wrap input{width:100%;font-size:13px;padding:6px 10px;border-radius:8px;border:1px solid var(--cab-border);background:var(--cab-bg);color:var(--cab-text);font-family:inherit;outline:none;transition:border-color .15s}
 .search-wrap input:focus{border-color:var(--cab-accent)}
+/* ── Clients browser: alphabet bar + list ── */
+.clients-browser{display:flex;flex:1;min-height:0;overflow:hidden}
+.alpha-bar{width:22px;flex-shrink:0;background:var(--cab-surface);border-right:1px solid var(--cab-border);overflow-y:auto;display:flex;flex-direction:column;align-items:center;padding:3px 0;scrollbar-width:none}
+.alpha-bar::-webkit-scrollbar{display:none}
+.alpha-letter{font-size:10px;font-weight:600;line-height:1.7;width:20px;text-align:center;border-radius:4px;transition:color .1s,background .1s}
+.alpha-letter.alpha-selected{color:var(--cab-accent);background:color-mix(in srgb,var(--cab-accent) 12%,transparent);cursor:pointer}
+.alpha-letter.alpha-has{color:var(--cab-text);cursor:pointer}
+.alpha-letter.alpha-has:hover{background:var(--cab-surface-alt)}
+.alpha-letter.alpha-empty{color:var(--cab-text-dim);cursor:default}
+/* ── Pagination ── */
+.pagination{display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 12px;border-top:1px solid var(--cab-border);background:var(--cab-surface);flex-shrink:0}
+.page-btn{background:none;border:1px solid var(--cab-border);border-radius:6px;padding:1px 8px;font-size:15px;cursor:pointer;color:var(--cab-text-sec);line-height:1.4;transition:background .12s,color .12s}
+.page-btn:hover:not(:disabled){background:var(--cab-surface-alt);color:var(--cab-text)}
+.page-btn:disabled{opacity:.35;cursor:not-allowed}
+.page-info{font-size:11px;color:var(--cab-text-sec);min-width:36px;text-align:center}
 .client-list{flex:1;overflow-y:auto}
 .client-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--cab-border);transition:background .12s}
 .client-item:hover{background:var(--cab-surface-alt)}
