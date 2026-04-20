@@ -20,7 +20,7 @@ const cabStore = {
   searchQuery: '',
   loadState: 'idle',
   loadError: '',
-  pageSize: 20,
+  pageSize: +(localStorage.getItem('cab_page_size') || 7) || 7,
   currentPage: 1,
   filteredCount: 0,
   selectedLetter: null,
@@ -153,6 +153,14 @@ const cabStore = {
   goToPage(page) {
     const total=Math.max(1,Math.ceil(this.filteredCount/this.pageSize));
     this.currentPage=Math.max(1,Math.min(page,total));
+    this.renderList();
+  },
+
+  setPageSize(n) {
+    const size=Math.max(5,Math.min(100,parseInt(n,10)||7));
+    this.pageSize=size;
+    this.currentPage=1;
+    try { localStorage.setItem('cab_page_size',size); } catch(_) {}
     this.renderList();
   },
 

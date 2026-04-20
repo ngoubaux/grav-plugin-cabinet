@@ -96,6 +96,7 @@ function cabinetSettingsModal() {
   return {
     clientId: '',
     calId:    '',
+    pageSize: 7,
 
     init() {
       this.$watch('$store.cab.modal.open', (open) => {
@@ -107,9 +108,11 @@ function cabinetSettingsModal() {
     loadValues() {
       this.clientId = localStorage.getItem('gdrive_client_id') || '';
       this.calId    = localStorage.getItem('gcal_calendar_id') || '';
+      this.pageSize = Alpine.store('cab').pageSize;
     },
 
     save() {
+      Alpine.store('cab').setPageSize(this.pageSize);
       Alpine.store('cab').saveGoogleSettings(this.clientId.trim(), this.calId.trim());
     },
   };

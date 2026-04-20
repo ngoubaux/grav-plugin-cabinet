@@ -146,6 +146,11 @@
             Paramètres du calendrier → « Adresse de l'agenda ». Laisser vide pour désactiver.
           </span>
         </div>
+        <div class="field">
+          <label>Clients par page</label>
+          <input type="number" x-model.number="pageSize" min="5" max="100" step="1">
+          <span class="field-hint">Nombre de clients affichés par page dans la liste (5–100).</span>
+        </div>
       </div>
       <button class="btn-save" @click="save()">Enregistrer et connecter</button>
     </div>
