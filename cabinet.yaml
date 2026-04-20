@@ -1,5 +1,9 @@
 enabled: true
 
+# Routes configurables
+route_app_base: '/cabinet'       # Slug de la page Cabinet (ex: /cabinet, /mon-espace, /mypractice)
+route_api_base: '/api/cabinet'   # Base des endpoints API métier
+
 # Clé secrète pour l'accès API externe (Make, scripts, etc.)
 # Changer impérativement avant déploiement
 api_key: 'CHANGE_ME_BEFORE_DEPLOY'

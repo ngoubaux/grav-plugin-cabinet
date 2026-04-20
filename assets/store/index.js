@@ -689,7 +689,7 @@ const cabStore = {
     this.loadState='loading';
     this.loadError='';
     try {
-      const r=await fetch('/api/cabinet/data',{cache:'no-store'});
+      const r=await fetch(getApiUrl('/data'),{cache:'no-store'});
       if(!r.ok){
         this.loadState='error';
         this.loadError=`Erreur API (${r.status})`;

@@ -1,10 +1,22 @@
 /* Cabinet — API helpers */
 
+function getApiUrl(endpoint) {
+  const base = window.CABINET_ROUTE_API || '/api/cabinet';
+  return base + endpoint;
+}
+
 async function apiCall(method, path, body=null) {
   try {
+    // Si le chemin commence par '/', utiliser la route API dynamique
+    const url = path.startsWith('/api/cabinet/')
+      ? getApiUrl(path.replace(/^\/api\/cabinet/, ''))
+      : path.startsWith('/')
+      ? path
+      : path;
+
     const opts={method, headers:{'Content-Type':'application/json'}};
     if(body!==null) opts.body=JSON.stringify(body);
-    const r=await fetch(path,opts);
+    const r=await fetch(url,opts);
     if(!r.ok) {
       let msg='Erreur';
       try{const d=await r.json(); msg=d.error||msg;}catch(_){}

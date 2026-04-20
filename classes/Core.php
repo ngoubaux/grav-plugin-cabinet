@@ -7,6 +7,18 @@ use RocketTheme\Toolbox\Event\Event;
 
 class Core
 {
+    private ?string $routeAppBase = null;
+    private ?string $routeApiBase = null;
+
+    public function __construct()
+    {
+        $config = Grav::instance()['config'] ?? null;
+        if ($config) {
+            $this->routeAppBase = (string) $config->get('plugins.cabinet.route_app_base', '/cabinet');
+            $this->routeApiBase = (string) $config->get('plugins.cabinet.route_api_base', '/api/cabinet');
+        }
+    }
+
     public function onTwigTemplatePaths(Event $event): void
     {
         $paths = $event['paths'];
@@ -16,9 +28,21 @@ class Core
 
     public function isRelevantPath(string $path): bool
     {
-        return $path === '/cabinet'
-            || strpos($path, '/cabinet/') === 0
-            || strpos($path, '/api/cabinet/') === 0
+        // Si les routes ne sont pas encore chargées, les recharger ici
+        if ($this->routeAppBase === null) {
+            $config = Grav::instance()['config'] ?? null;
+            if ($config) {
+                $this->routeAppBase = (string) $config->get('plugins.cabinet.route_app_base', '/cabinet');
+                $this->routeApiBase = (string) $config->get('plugins.cabinet.route_api_base', '/api/cabinet');
+            }
+        }
+
+        $appBase = $this->routeAppBase ?? '/cabinet';
+        $apiBase = $this->routeApiBase ?? '/api/cabinet';
+
+        return $path === $appBase
+            || strpos($path, $appBase . '/') === 0
+            || strpos($path, $apiBase . '/') === 0
             || strpos($path, '/api/contacts/') === 0;
     }
 
@@ -29,7 +53,8 @@ class Core
             return;
         }
 
-        header('Location: /login?redirect=/cabinet');
+        $appBase = $this->routeAppBase ?? '/cabinet';
+        header('Location: /login?redirect=' . urlencode($appBase));
         exit;
     }
 
@@ -113,5 +138,27 @@ class Core
     private function grav(): Grav
     {
         return Grav::instance();
+    }
+
+    public function getRouteAppBase(): string
+    {
+        if ($this->routeAppBase === null) {
+            $config = Grav::instance()['config'] ?? null;
+            if ($config) {
+                $this->routeAppBase = (string) $config->get('plugins.cabinet.route_app_base', '/cabinet');
+            }
+        }
+        return $this->routeAppBase ?? '/cabinet';
+    }
+
+    public function getRouteApiBase(): string
+    {
+        if ($this->routeApiBase === null) {
+            $config = Grav::instance()['config'] ?? null;
+            if ($config) {
+                $this->routeApiBase = (string) $config->get('plugins.cabinet.route_api_base', '/api/cabinet');
+            }
+        }
+        return $this->routeApiBase ?? '/api/cabinet';
     }
 }

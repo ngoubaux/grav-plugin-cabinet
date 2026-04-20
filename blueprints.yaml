@@ -35,7 +35,7 @@ form:
 
     debug:
       type: toggle
-      label: Mode debug
+      label: Mode debug (logs détaillés)
       highlight: 1
       default: 0
       options:
@@ -57,6 +57,25 @@ form:
       label: Origine CORS
       help: "* pour tout autoriser, ou une URL précise"
       default: '*'
+
+    routing:
+      type: section
+      title: Routes
+      underline: true
+
+    route_app_base:
+      type: text
+      label: Slug de la page Cabinet
+      help: "Route de la page Cabinet dans Grav (ex: /cabinet, /mon-espace). Doit correspondre au slug de votre page."
+      default: '/cabinet'
+      placeholder: '/cabinet'
+
+    route_api_base:
+      type: text
+      label: Base des endpoints API
+      help: "Namespace racine des endpoints REST (ex: /api/cabinet, /api/spa). Permet de compartimenter vos APIs."
+      default: '/api/cabinet'
+      placeholder: '/api/cabinet'
 
     praticien:
       type: section

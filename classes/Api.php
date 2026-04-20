@@ -49,6 +49,8 @@ class Api
     {
         $path = rtrim(Grav::instance()['uri']->path(), '/');
         $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+        $appBase = $this->core->getRouteAppBase();
+        $apiBase = $this->core->getRouteApiBase();
 
         if ($method === 'OPTIONS') {
             $this->core->corsHeaders();
@@ -56,25 +58,25 @@ class Api
             exit;
         }
 
-        if ($path === '/cabinet') {
-            // Let Grav page routing and frontmatter access rules handle auth.
+        // Page app elle-même — laisser Grav la router
+        if ($path === $appBase) {
             return;
         }
 
-        if ($path === '/cabinet/cabinet.css') {
+        // Assets statiques
+        if ($path === $appBase . '/cabinet.css') {
             $this->serveAsset('cabinet.css', 'text/css');
         }
 
-        if (preg_match('#^/cabinet/([\w\-]+(?:/[\w\-]+)*\.js)$#', $path, $m)) {
+        if (preg_match('#^' . preg_quote($appBase, '#') . '/([\w\-]+(?:/[\w\-]+)*\.js)$#', $path, $m)) {
             $this->serveAsset($m[1], 'application/javascript');
         }
 
-        if ($path === '/cabinet/manifest.json') {
+        if ($path === $appBase . '/manifest.json') {
             $this->serveAsset('manifest.json', 'application/manifest+json');
         }
 
-
-        if ($path === '/cabinet/bilan-template.pdf') {
+        if ($path === $appBase . '/bilan-template.pdf') {
             $this->core->requireGravSession();
             $file = dirname(__DIR__) . '/assets/Fiche Client - Shiatsu.pdf';
             if (!file_exists($file)) {
@@ -89,21 +91,20 @@ class Api
             exit;
         }
 
-        if ($path === '/api/cabinet/data') {
+        if ($path === $apiBase . '/data') {
             $this->core->requireGravSession();
             if ($method === 'GET') {
                 $this->seances->getData();
             }
-            // POST no longer handled — use /api/cabinet/clients and /api/cabinet/rendezvous
         }
 
         // ── Clients CRUD ─────────────────────────────────────────────────────
-        if ($path === '/api/cabinet/clients' && $method === 'POST') {
+        if ($path === $apiBase . '/clients' && $method === 'POST') {
             $this->core->requireSessionOrApiKey();
             $this->seances->createClientRecord();
         }
 
-        if (preg_match('#^/api/cabinet/clients/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
+        if (preg_match('#^' . preg_quote($apiBase, '#') . '/clients/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
             $this->core->requireSessionOrApiKey();
             $id = rawurldecode($m[1]);
             if ($method === 'PUT') $this->seances->updateClientRecord($id);
@@ -111,12 +112,12 @@ class Api
         }
 
         // ── Rendez-vous CRUD ─────────────────────────────────────────────────
-        if ($path === '/api/cabinet/rendezvous' && $method === 'POST') {
+        if ($path === $apiBase . '/rendezvous' && $method === 'POST') {
             $this->core->requireSessionOrApiKey();
             $this->seances->createRendezvousRecord();
         }
 
-        if (preg_match('#^/api/cabinet/rendezvous/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
+        if (preg_match('#^' . preg_quote($apiBase, '#') . '/rendezvous/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
             $this->core->requireSessionOrApiKey();
             $id = rawurldecode($m[1]);
             if ($method === 'PUT') $this->seances->updateRendezvousRecord($id);
@@ -124,29 +125,29 @@ class Api
         }
 
         // ── Communications (history) ───────────────────────────────────────
-        if (preg_match('#^/api/cabinet/communications/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
+        if (preg_match('#^' . preg_quote($apiBase, '#') . '/communications/([a-zA-Z0-9_%-]+)$#', $path, $m)) {
             $this->core->requireSessionOrApiKey();
             $id = rawurldecode($m[1]);
             if ($method === 'PUT') $this->communication->updateClientCommunicationsRecord($id);
         }
 
-        if ($path === '/api/cabinet/rendezvous' && $method === 'GET') {
+        if ($path === $apiBase . '/rendezvous' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
             $this->core->jsonExit($this->seances->buildRendezVousPayload());
         }
 
-        if ($path === '/api/cabinet/facturation' && $method === 'GET') {
+        if ($path === $apiBase . '/facturation' && $method === 'GET') {
             $this->core->requireGravSession();
             $this->core->jsonExit($this->seances->buildFacturationPayload());
         }
 
         // ── Import ────────────────────────────────────────────────────────────
-        if ($path === '/api/cabinet/import/clients' && $method === 'POST') {
+        if ($path === $apiBase . '/import/clients' && $method === 'POST') {
             $this->core->requireGravSession();
             $this->import->handleImportClients();
         }
 
-        if ($path === '/api/cabinet/import/rendezvous' && $method === 'POST') {
+        if ($path === $apiBase . '/import/rendezvous' && $method === 'POST') {
             $this->core->requireGravSession();
             $this->import->handleImportRendezvous();
         }
@@ -157,39 +158,39 @@ class Api
         }
 
         // ── SMS ──────────────────────────────────────────────────────────────────
-        if ($path === '/api/cabinet/sms/preparation' && $method === 'POST') {
+        if ($path === $apiBase . '/sms/preparation' && $method === 'POST') {
             $this->core->requireGravSession();
             $this->sms->handleSendPreparation();
         }
 
-        if ($path === '/api/cabinet/sms/send-preparation' && $method === 'POST') {
+        if ($path === $apiBase . '/sms/send-preparation' && $method === 'POST') {
             $this->core->requireGravSession();
             $this->sms->handleSendPreparationDirect();
         }
 
-        if ($path === '/api/cabinet/sms/rappels' && $method === 'POST') {
+        if ($path === $apiBase . '/sms/rappels' && $method === 'POST') {
             $this->core->requireSessionOrApiKey();
             $this->sms->handleSendRappels();
         }
 
         // ── SMS queue (Termux cron) ───────────────────────────────────────────
-        if ($path === '/api/cabinet/sms/queue' && $method === 'GET') {
+        if ($path === $apiBase . '/sms/queue' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
             $this->communication->getSmsQueue();
         }
 
-        if (preg_match('#^/api/cabinet/sms/queue/([a-zA-Z0-9_%-]+)/ack$#', $path, $m) && $method === 'POST') {
+        if (preg_match('#^' . preg_quote($apiBase, '#') . '/sms/queue/([a-zA-Z0-9_%-]+)/ack$#', $path, $m) && $method === 'POST') {
             $this->core->requireSessionOrApiKey();
             $this->communication->ackSmsQueueItem(rawurldecode($m[1]));
         }
 
         // ── Scripts Termux pré-configurés ─────────────────────────────────────
-        if ($path === '/api/cabinet/termux/bootstrap' && $method === 'GET') {
+        if ($path === $apiBase . '/termux/bootstrap' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
             $this->serveTermuxScript('termux-bootstrap.sh.twig', 'termux-bootstrap.sh');
         }
 
-        if ($path === '/api/cabinet/termux/sms-queue' && $method === 'GET') {
+        if ($path === $apiBase . '/termux/sms-queue' && $method === 'GET') {
             $this->core->requireSessionOrApiKey();
             $this->serveTermuxScript('termux-sms-queue.py.twig', 'termux-sms-queue.py');
         }

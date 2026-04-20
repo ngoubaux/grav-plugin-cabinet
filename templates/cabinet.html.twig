@@ -1,10 +1,11 @@
 {% extends 'partials/base.html.twig' %}
 
 {% set cab_ver = '20260420-06' %}
+{% set route_app = app.plugins.cabinet.route_app_base ?? '/cabinet' %}
 
 {% block stylesheets %}
   {{ parent() }}
-  {% do assets.addCss('/cabinet/cabinet.css?v=' ~ cab_ver, {priority: 5}) %}
+  {% do assets.addCss(route_app ~ '/cabinet.css?v=' ~ cab_ver, {priority: 5}) %}
 {% endblock %}
 
 {% block javascripts %}
@@ -12,23 +13,23 @@
   {% do assets.addJs('https://apis.google.com/js/api.js', {group: 'head', loading: 'defer'}) %}
   {% do assets.addJs('https://accounts.google.com/gsi/client', {group: 'head', loading: 'async'}) %}
   {# utils — chargés en premier, pas de dépendances entre eux #}
-  {% do assets.addJs('/cabinet/utils/constants.js?v=' ~ cab_ver, {group: 'bottom', priority: 22}) %}
-  {% do assets.addJs('/cabinet/utils/helpers.js?v=' ~ cab_ver,   {group: 'bottom', priority: 20}) %}
-  {% do assets.addJs('/cabinet/utils/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 18}) %}
-  {% do assets.addJs('/cabinet/utils/api.js?v=' ~ cab_ver,       {group: 'bottom', priority: 17}) %}
-  {% do assets.addJs('/cabinet/utils/sms.js?v=' ~ cab_ver,       {group: 'bottom', priority: 16}) %}
+  {% do assets.addJs(route_app ~ '/utils/constants.js?v=' ~ cab_ver, {group: 'bottom', priority: 22}) %}
+  {% do assets.addJs(route_app ~ '/utils/helpers.js?v=' ~ cab_ver,   {group: 'bottom', priority: 20}) %}
+  {% do assets.addJs(route_app ~ '/utils/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 18}) %}
+  {% do assets.addJs(route_app ~ '/utils/api.js?v=' ~ cab_ver,       {group: 'bottom', priority: 17}) %}
+  {% do assets.addJs(route_app ~ '/utils/sms.js?v=' ~ cab_ver,       {group: 'bottom', priority: 16}) %}
   {# drive — dépend des utils #}
-  {% do assets.addJs('/cabinet/cab-drive.js?v=' ~ cab_ver,       {group: 'bottom', priority: 14}) %}
+  {% do assets.addJs(route_app ~ '/cab-drive.js?v=' ~ cab_ver,       {group: 'bottom', priority: 14}) %}
   {# store — dépend de tout ce qui précède #}
-  {% do assets.addJs('/cabinet/store/index.js?v=' ~ cab_ver,     {group: 'bottom', priority: 12}) %}
+  {% do assets.addJs(route_app ~ '/store/index.js?v=' ~ cab_ver,     {group: 'bottom', priority: 12}) %}
   {# components — chacun définit une factory function globale #}
-  {% do assets.addJs('/cabinet/components/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 9}) %}
-  {% do assets.addJs('/cabinet/components/sidebar.js?v=' ~ cab_ver,   {group: 'bottom', priority: 8}) %}
-  {% do assets.addJs('/cabinet/components/modal.js?v=' ~ cab_ver,     {group: 'bottom', priority: 7}) %}
-  {% do assets.addJs('/cabinet/components/accordion.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
-  {% do assets.addJs('/cabinet/components/drive-bar.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {% do assets.addJs(route_app ~ '/components/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 9}) %}
+  {% do assets.addJs(route_app ~ '/components/sidebar.js?v=' ~ cab_ver,   {group: 'bottom', priority: 8}) %}
+  {% do assets.addJs(route_app ~ '/components/modal.js?v=' ~ cab_ver,     {group: 'bottom', priority: 7}) %}
+  {% do assets.addJs(route_app ~ '/components/accordion.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {% do assets.addJs(route_app ~ '/components/drive-bar.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
   {# main — point d'entrée Alpine, enregistre tout #}
-  {% do assets.addJs('/cabinet/main.js?v=' ~ cab_ver,            {group: 'bottom', priority: 5}) %}
+  {% do assets.addJs(route_app ~ '/main.js?v=' ~ cab_ver,            {group: 'bottom', priority: 5}) %}
 {% endblock %}
 
 {% block body %}
@@ -49,9 +50,13 @@
 
 {% include 'partials/cabinet/modals.html.twig' %}
 
-<script>window.CABINET_SITE_URL = '{{ base_url_absolute|raw }}';</script>
+<script>
+  window.CABINET_SITE_URL = '{{ base_url_absolute|raw }}';
+  window.CABINET_ROUTE_APP = '{{ app.plugins.cabinet.route_app_base ?? '/cabinet' }}';
+  window.CABINET_ROUTE_API = '{{ app.plugins.cabinet.route_api_base ?? '/api/cabinet' }}';
+</script>
 <script>
   if('serviceWorker' in navigator)
-    navigator.serviceWorker.register('/cabinet/sw.js?v={{ cab_ver }}').catch(()=>{});
+    navigator.serviceWorker.register('{{ app.plugins.cabinet.route_app_base ?? '/cabinet' }}/sw.js?v={{ cab_ver }}').catch(()=>{});
 </script>
 {% endblock %}
