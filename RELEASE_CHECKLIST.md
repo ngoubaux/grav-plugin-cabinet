@@ -2,8 +2,8 @@
 
 ## 1. Pré-requis dépôt GitHub
 
-- [ ] Le dépôt `github.com/ngoubaux/grav-plugin-cabinet` est **public**
-- [ ] Le dépôt contient les fichiers obligatoires GPM :
+- [x] Le dépôt `github.com/ngoubaux/grav-plugin-cabinet` est **public**
+- [x] Le dépôt contient les fichiers obligatoires GPM :
   - [x] `blueprints.yaml` (métadonnées + formulaire admin)
   - [x] `cabinet.php` (classe principale du plugin)
   - [x] `cabinet.yaml` (config par défaut — aucune clé réelle)
@@ -19,14 +19,14 @@
 - [x] `cabinet.yaml` (plugin) → uniquement des placeholders (`CHANGE_ME_BEFORE_DEPLOY`)
 - [x] `assets/resalib-sync.gs` → `CALENDAR_ID`, `WEBHOOK_URL`, `CABINET_API_KEY` = `'REMPLACER'`
 - [x] `blueprints.yaml` → `xxxx.apps.googleusercontent.com` = valeur d'exemple
-- [ ] **`user/config/plugins/cabinet.yaml`** est dans le `.gitignore` du dépôt parent (contient les vraies clés — NE PAS pousser)
+- [x] **`user/config/plugins/cabinet.yaml`** est dans le `.gitignore` du dépôt parent (contient les vraies clés — NE PAS pousser)
 
 ---
 
 ## 3. Cohérence de version
 
-- [ ] `blueprints.yaml` → `version: 2.0.0`
-- [ ] `CHANGELOG.md` → entrée `# 2.0.0` présente
+- [x] `blueprints.yaml` → `version: 2.0.0`
+- [x] `CHANGELOG.md` → entrée `# 2.0.0` présente
 - [ ] Tag Git = `v2.0.0` (ou `2.0.0` — choisir et tenir constant)
 
 ---
