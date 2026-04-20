@@ -105,9 +105,9 @@ class Sms
 
     private function sendViaSmsMobileApi(string $phone, string $message): array
     {
-        $apiKey = $this->getApiKey();
+        $apiKey = $this->getSmsProviderToken();
         if ($apiKey === '') {
-            return ['ok' => false, 'error' => 'Clé API SMS non configurée', 'status' => 400];
+            return ['ok' => false, 'error' => 'Token SMS provider non configuré', 'status' => 400];
         }
 
         $payload = http_build_query([
@@ -401,9 +401,17 @@ class Sms
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    private function getApiKey(): string
+    private function getSmsProviderToken(): string
     {
-        return trim((string) Grav::instance()['config']->get('plugins.cabinet.sms_api_key', ''));
+        $config = Grav::instance()['config'];
+
+        $value = trim((string) $config->get('plugins.cabinet.sms_push_token', ''));
+        if ($value !== '') {
+            return $value;
+        }
+
+        // Backward compatibility with previous dedicated SMSMobileAPI key.
+        return trim((string) $config->get('plugins.cabinet.sms_api_key', ''));
     }
 
     private function getProvider(): string

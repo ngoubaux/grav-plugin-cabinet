@@ -98,12 +98,6 @@ form:
       validate:
         type: bool
 
-    sms_api_key:
-      type: text
-      label: Clé API SMSMobileAPI
-      help: "Disponible sur app.smsmobileapi.com → Mon compte"
-      placeholder: votre-api-key
-
     sms_provider:
       type: select
       label: Provider SMS
@@ -114,17 +108,17 @@ form:
         android_queue: Android natif — file d'attente SMS (MacroDroid ou Termux)
       help: "Choisissez le mode d'envoi SMS. android_queue écrit les SMS dans une file d'attente que votre téléphone Android récupère et envoie via MacroDroid ou Termux."
 
+    sms_push_token:
+      type: text
+      label: Token provider SMS
+      help: "Utilisé par SMSMobileAPI (clé API), Simple SMS Gateway (Authorization: Bearer) et Android natif (X-Api-Key dans les scripts Termux/MacroDroid). Si vide, les scripts Android utilisent la Clé API principale."
+      placeholder: token-ou-cle-provider
+
     sms_simple_gateway_url:
       type: text
       label: URL Simple SMS Gateway
       help: "Endpoint HTTP de votre passerelle téléphone (ex: https://.../send-sms). Le payload envoyé est {to, message}."
       placeholder: https://votre-passerelle.example/send-sms
-
-    sms_push_token:
-      type: text
-      label: Token Bearer providers push (optionnel)
-      help: "Partagé entre Simple SMS Gateway (Authorization: Bearer) et Android natif (X-Api-Key dans les scripts Termux/MacroDroid). Si vide, le script Android utilise la Clé API principale."
-      placeholder: token-optionnel
 
     sms_rappel_cron:
       type: text
