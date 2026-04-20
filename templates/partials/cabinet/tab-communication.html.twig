@@ -1,25 +1,26 @@
-<div x-show="$store.cab.activeTab==='communication'" class="comm-wrap">
+<div x-show="$store.cab.activeTab==='communication'" class="flex flex-col gap-3.5">
 
-  <div class="comm-head">
+  <div class="flex justify-between items-center gap-2.5 flex-wrap">
     <div class="section-label" style="margin:0">Centre de communication</div>
-    <div class="comm-head-actions">
+    <div class="flex gap-1.5 flex-wrap">
       <button class="btn-ghost btn-sm" @click="$store.cab.applyCommunicationTemplate('prep-visite')">Template visite</button>
       <button class="btn-ghost btn-sm" @click="$store.cab.applyCommunicationTemplate('relance')">Relance douce</button>
       <button class="btn-ghost btn-sm" @click="$store.cab.applyCommunicationTemplate('compte-rendu')">Compte-rendu</button>
     </div>
   </div>
 
-  <div class="comm-grid">
+  <div class="grid grid-cols-[minmax(300px,1fr)_minmax(300px,1fr)] gap-3.5 items-start max-md:grid-cols-1">
 
-    <div class="comm-compose">
+    {# Compose #}
+    <div class="border border-zinc-200 dark:border-zinc-700 rounded-[10px] bg-white dark:bg-zinc-900 p-3.5">
       <div class="section-label">Nouveau message</div>
 
-      <div class="comm-channel-switch" role="tablist" aria-label="Canal de communication">
+      <div class="flex gap-2 mb-2.5" role="tablist" aria-label="Canal de communication">
         <button type="button" class="btn-ghost btn-sm"
-                :class="{active: $store.cab.communicationDraft.channel==='sms'}"
+                :class="$store.cab.communicationDraft.channel==='sms' ? '!bg-primary !border-primary !text-white' : ''"
                 @click="$store.cab.setCommunicationChannel('sms')">SMS</button>
         <button type="button" class="btn-ghost btn-sm"
-                :class="{active: $store.cab.communicationDraft.channel==='email'}"
+                :class="$store.cab.communicationDraft.channel==='email' ? '!bg-primary !border-primary !text-white' : ''"
                 @click="$store.cab.setCommunicationChannel('email')">Email</button>
       </div>
 
@@ -40,8 +41,7 @@
 
       <div class="field">
         <label>Message</label>
-        <textarea class="comm-message" x-model="$store.cab.communicationDraft.message"
-                  rows="6"
+        <textarea x-model="$store.cab.communicationDraft.message" rows="6" style="min-height:260px"
                   placeholder="Votre message..."></textarea>
       </div>
 
@@ -51,27 +51,22 @@
       </div>
 
       <div class="btn-row">
-        <button class="btn-save" @click="$store.cab.sendCommunication()">
-          Envoyer / préparer
-        </button>
-        <button class="btn-ghost" @click="$store.cab.copyCommunicationMessage()">
-          Copier message
-        </button>
-        <button class="btn-ghost" @click="$store.cab.initCommunicationDraft($store.cab.communicationDraft.channel)">
-          Réinitialiser
-        </button>
+        <button class="btn-save" @click="$store.cab.sendCommunication()">Envoyer / préparer</button>
+        <button class="btn-ghost" @click="$store.cab.copyCommunicationMessage()">Copier message</button>
+        <button class="btn-ghost" @click="$store.cab.initCommunicationDraft($store.cab.communicationDraft.channel)">Réinitialiser</button>
       </div>
 
-      <div class="comm-help">
+      <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 leading-[1.45]">
         Astuce: si l'envoi SMS API n'est pas configuré, le module ouvre le client SMS natif et garde une trace dans l'historique.
       </div>
-      <div class="comm-help" x-show="!$store.cab.communicationSettings.googleReviewUrl">
+      <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 leading-[1.45]" x-show="!$store.cab.communicationSettings.googleReviewUrl">
         Conseil: configurez l'URL Google Business dans l'admin plugin pour activer l'invitation à laisser un avis dans le template compte-rendu.
       </div>
     </div>
 
-    <div class="comm-history">
-      <div class="comm-history-head">
+    {# History #}
+    <div class="border border-zinc-200 dark:border-zinc-700 rounded-[10px] bg-white dark:bg-zinc-900 p-3.5">
+      <div class="flex justify-between items-center gap-2.5 mb-2.5">
         <div class="section-label" style="margin:0">Historique</div>
         <select x-model="$store.cab.communicationFilter" class="mer-select" style="max-width:150px">
           <option value="all">Tout</option>
@@ -80,37 +75,39 @@
         </select>
       </div>
 
-      <div x-show="$store.cab.activeCommunications.length===0" class="agenda-empty">
+      <div x-show="$store.cab.activeCommunications.length===0"
+           class="text-center py-6 text-[12px] text-zinc-400 dark:text-zinc-500">
         Aucun échange enregistré pour le moment.
       </div>
 
       <template x-for="entry in $store.cab.activeCommunications" :key="entry.id">
-        <div class="comm-item">
-          <div class="comm-item-top">
-            <div class="comm-badges">
+        <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-2.5 bg-zinc-100 dark:bg-zinc-800 mb-2">
+          <div class="flex justify-between items-center gap-2">
+            <div class="flex gap-[5px] flex-wrap">
               <span class="energie-chip" :class="entry.channel==='sms' ? 'e-vide' : 'e-ok'"
                     x-text="entry.channel==='sms' ? 'SMS' : 'EMAIL'"></span>
               <span class="energie-chip e-nd" x-text="entry.status || 'prepared'"></span>
               <span class="energie-chip e-stase" x-show="entry.followUpAt"
                     x-text="'Suivi: ' + entry.followUpAt"></span>
             </div>
-            <div class="comm-item-actions">
+            <div class="flex items-center gap-1.5">
               <button class="btn-ghost btn-sm" @click="$store.cab.markCommunicationDone(entry.id)">
                 <span x-text="entry.status==='done' ? 'Réouvrir' : 'Traité'"></span>
               </button>
-              <button class="delete-btn" @click="$store.cab.deleteCommunication(entry.id)">&#10005;</button>
+              <button class="bg-transparent border-none text-zinc-400 dark:text-zinc-500 text-[11px] cursor-pointer px-1.5 py-0.5 rounded transition-colors hover:text-primary"
+                      @click="$store.cab.deleteCommunication(entry.id)">&#10005;</button>
             </div>
           </div>
 
-          <div class="comm-meta">
+          <div class="text-[11px] text-zinc-500 dark:text-zinc-400 flex gap-1.5 items-center mt-1.5">
             <span x-text="new Date(entry.createdAt).toLocaleString('fr-FR')"></span>
             <span>•</span>
             <span x-text="entry.to || 'destinataire inconnu'"></span>
           </div>
 
-          <div class="comm-subject" x-show="entry.subject" x-text="entry.subject"></div>
-          <div class="comm-text" x-text="entry.message"></div>
-          <div class="comm-help" x-show="entry.errorMessage" x-text="'Erreur: ' + entry.errorMessage"></div>
+          <div class="text-[12px] font-semibold text-zinc-700 dark:text-zinc-200 mt-1.5" x-show="entry.subject" x-text="entry.subject"></div>
+          <div class="text-[12px] leading-[1.45] text-zinc-700 dark:text-zinc-200 mt-1.5 whitespace-pre-wrap" x-text="entry.message"></div>
+          <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-2 leading-[1.45]" x-show="entry.errorMessage" x-text="'Erreur: ' + entry.errorMessage"></div>
         </div>
       </template>
     </div>

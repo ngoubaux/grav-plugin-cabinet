@@ -1,14 +1,15 @@
-<div class="modal-overlay" x-data
+<div class="fixed inset-0 bg-black/45 dark:bg-black/65 flex items-center justify-center z-[100] backdrop-blur-[2px] max-md:items-end"
+     x-data
      x-show="$store.cab.modal.open"
      @click.self="$store.cab.closeModal()"
      style="display:none">
-  <div class="modal">
+  <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-700 p-[22px] w-[560px] max-w-[92vw] max-h-[88vh] overflow-y-auto shadow-[0_8px_32px_rgba(0,0,0,.18)] max-md:w-full max-md:max-w-full max-md:max-h-[90dvh] max-md:rounded-t-2xl max-md:rounded-b-none max-md:border-none max-md:m-0">
 
     {# ── Nouveau client ── #}
     <div x-show="$store.cab.modal.type==='new-client'" x-data="cabinetNewClientModal">
-      <div class="modal-head">
-        <span class="modal-title">Nouveau client</span>
-        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-[15px] font-semibold">Nouveau client</span>
+        <button class="bg-transparent border-none text-[18px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" @click="$store.cab.closeModal()">&#215;</button>
       </div>
       <div class="field-grid">
         <div class="field"><label>Prénom *</label><input x-model="form.first_name" @keyup.enter="submit()"></div>
@@ -22,15 +23,17 @@
 
     {# ── Séance (nouvelle / modification) ── #}
     <div x-show="$store.cab.modal.type==='session'" x-data="cabinetSessionModal">
-      <div class="modal-head">
-        <span class="modal-title" x-text="isEdit ? 'Modifier la séance' : 'Nouvelle séance'"></span>
-        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-[15px] font-semibold" x-text="isEdit ? 'Modifier la séance' : 'Nouvelle séance'"></span>
+        <button class="bg-transparent border-none text-[18px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" @click="$store.cab.closeModal()">&#215;</button>
       </div>
 
-      <div class="modal-tab-nav">
-        <div class="stab" :class="{active: modalTab==='clinique'}"
+      <div class="flex mb-[18px] border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+        <div class="flex-1 text-center px-3.5 py-1.5 text-[12px] cursor-pointer transition-colors"
+             :class="modalTab==='clinique' ? 'bg-primary text-white' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
              @click="modalTab='clinique'">Clinique</div>
-        <div class="stab" :class="{active: modalTab==='energetique'}"
+        <div class="flex-1 text-center px-3.5 py-1.5 text-[12px] cursor-pointer transition-colors"
+             :class="modalTab==='energetique' ? 'bg-primary text-white' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
              @click="modalTab='energetique'">Bilan</div>
       </div>
 
@@ -71,8 +74,8 @@
             <label>Intention pour la prochaine séance</label>
             <input x-model="form.prochaine">
           </div>
-          <div class="field field-full" x-show="smsEnabled" style="margin-top:4px">
-            <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <div class="field field-full mt-1" x-show="smsEnabled">
+            <label class="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" x-model="form.sms_rappel_disabled">
               Désactiver le rappel SMS J-1 pour cette séance
             </label>
@@ -83,11 +86,12 @@
       <div x-show="modalTab==='energetique'">
         <div class="internal-badge">Usage interne — non communiqué au client</div>
         <div class="section-label">État des méridiens</div>
-        <div class="meridian-grid">
+        <div class="grid grid-cols-3 gap-2 mb-3 max-md:grid-cols-2">
           <template x-for="m in meridians()" :key="m.id">
-            <div class="mer-item">
-              <div class="mer-name" x-text="m.name"></div>
-              <select class="mer-select" x-model="bilan[m.id]">
+            <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-2 bg-zinc-100 dark:bg-zinc-800">
+              <div class="text-[11px] font-medium mb-1" x-text="m.name"></div>
+              <select class="w-full text-[11px] px-[5px] py-[3px] rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 font-[inherit] outline-none"
+                      x-model="bilan[m.id]">
                 <template x-for="st in meridianStates()" :key="st.val">
                   <option :value="st.val" x-text="st.label"></option>
                 </template>
@@ -125,9 +129,9 @@
 
     {# ── Configuration Google ── #}
     <div x-show="$store.cab.modal.type==='settings'" x-data="cabinetSettingsModal">
-      <div class="modal-head">
-        <span class="modal-title">Configuration Google</span>
-        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-[15px] font-semibold">Configuration Google</span>
+        <button class="bg-transparent border-none text-[18px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" @click="$store.cab.closeModal()">&#215;</button>
       </div>
       <div class="internal-badge">Ces paramètres sont stockés sur cet appareil uniquement</div>
       <div class="field-grid">
@@ -157,13 +161,17 @@
 
     {# ── Import données ── #}
     <div x-show="$store.cab.modal.type==='import'" x-data="cabinetImportModal">
-      <div class="modal-head">
-        <span class="modal-title">Import données</span>
-        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-[15px] font-semibold">Import données</span>
+        <button class="bg-transparent border-none text-[18px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" @click="$store.cab.closeModal()">&#215;</button>
       </div>
-      <div class="modal-tab-nav">
-        <div class="stab" :class="{active: tab==='clients'}"    @click="switchTab('clients')">Clients (CSV)</div>
-        <div class="stab" :class="{active: tab==='rendezvous'}" @click="switchTab('rendezvous')">Rendez-vous (ICS)</div>
+      <div class="flex mb-[18px] border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+        <div class="flex-1 text-center px-3.5 py-1.5 text-[12px] cursor-pointer transition-colors"
+             :class="tab==='clients' ? 'bg-primary text-white' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
+             @click="switchTab('clients')">Clients (CSV)</div>
+        <div class="flex-1 text-center px-3.5 py-1.5 text-[12px] cursor-pointer transition-colors"
+             :class="tab==='rendezvous' ? 'bg-primary text-white' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
+             @click="switchTab('rendezvous')">Rendez-vous (ICS)</div>
       </div>
       <div class="field-grid">
         <div class="field field-full">
@@ -173,12 +181,14 @@
           <span class="field-hint" x-show="tab === 'rendezvous'">Export Google Calendar / Resalib.fr (.ics)</span>
         </div>
         <div class="field field-full">
-          <label class="cab-toggle-label">
+          <label class="flex items-center gap-[10px] cursor-pointer select-none">
             <button type="button" role="switch" :aria-checked="dryRun" @click="dryRun = !dryRun"
-                    class="cab-toggle" :class="dryRun ? 'cab-toggle-on' : ''">
-              <span class="cab-toggle-thumb"></span>
+                    class="relative inline-flex items-center w-11 h-6 rounded-full border-none p-[2px] transition-colors shrink-0 cursor-pointer focus:outline-2 focus:outline-offset-2 focus:outline-primary"
+                    :class="dryRun ? 'bg-yellow-500' : 'bg-zinc-300 dark:bg-zinc-600'">
+              <span class="w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-transform"
+                    :class="dryRun ? 'translate-x-5' : 'translate-x-0'"></span>
             </button>
-            <span class="cab-toggle-text"
+            <span class="text-[13px] text-zinc-500 dark:text-zinc-400"
                   x-text="dryRun ? 'Simulation — aucune donnée modifiée' : 'Import réel — les données seront modifiées'"></span>
           </label>
         </div>
@@ -186,18 +196,19 @@
       <button class="btn-save" :disabled="running || !file"
               @click="run()"
               x-text="running ? 'En cours…' : (dryRun ? 'Simuler' : 'Importer')"></button>
-      <div x-show="result" style="margin-top:14px">
-        <div class="import-stats" x-show="result?.stats">
+      <div x-show="result" class="mt-3.5">
+        <div class="flex gap-3 flex-wrap text-[12px] font-semibold mb-2" x-show="result?.stats">
           <span class="imp-create" x-text="'Créés : '      + (result?.stats?.created ?? 0)"></span>
           <span class="imp-update" x-text="'Mis à jour : ' + (result?.stats?.updated ?? 0)"></span>
           <span class="imp-skip"   x-text="'Ignorés : '    + (result?.stats?.skipped ?? 0)"></span>
           <span class="imp-error"  x-text="'Erreurs : '    + (result?.stats?.errors  ?? 0)"></span>
-          <span x-show="result?.dry_run" style="font-style:italic;color:var(--cab-text-sec)">(simulation)</span>
+          <span x-show="result?.dry_run" class="italic text-zinc-500 dark:text-zinc-400">(simulation)</span>
         </div>
-        <div class="import-log">
+        <div class="text-[11px] max-h-[220px] overflow-y-auto border border-zinc-200 dark:border-zinc-700 rounded-md font-mono">
           <template x-for="(entry, i) in (result?.log || [])" :key="i">
-            <div class="import-log-entry" :class="actionClass(entry.action)">
-              <span class="imp-action" x-text="entry.action"></span>
+            <div class="flex gap-2 px-2 py-[3px] border-b border-zinc-200 dark:border-zinc-700 last:border-b-0"
+                 :class="actionClass(entry.action)">
+              <span class="font-bold min-w-[52px] shrink-0" x-text="entry.action"></span>
               <span x-text="entry.msg"></span>
             </div>
           </template>
@@ -207,16 +218,18 @@
 
     {# ── Vérification globale ── #}
     <div x-show="$store.cab.modal.type==='verif'" x-data>
-      <div class="modal-head">
-        <span class="modal-title">Vérification globale</span>
-        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      <div class="flex justify-between items-center mb-4">
+        <span class="text-[15px] font-semibold">Vérification globale</span>
+        <button class="bg-transparent border-none text-[18px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" @click="$store.cab.closeModal()">&#215;</button>
       </div>
-      <div class="verif-log">
+      <div class="text-[12px] leading-[1.9] max-h-[360px] overflow-y-auto font-mono bg-zinc-100 dark:bg-zinc-800 px-3.5 py-3 rounded-lg mb-3 border border-zinc-200 dark:border-zinc-700">
         <template x-for="(entry, i) in $store.cab.modal.verifLog" :key="i">
-          <div class="verif-entry" :class="entry.type ? 'verif-' + entry.type : ''" x-html="entry.msg"></div>
+          <div class="text-zinc-500 dark:text-zinc-400"
+               :class="entry.type ? 'verif-' + entry.type : ''"
+               x-html="entry.msg"></div>
         </template>
       </div>
-      <div class="verif-footer"
+      <div class="text-[12px] text-zinc-500 dark:text-zinc-400 pt-[2px]"
            :class="$store.cab.modal.verifDone
              ? ($store.cab.modal.verifSummary?.ok ? 'verif-footer-ok' : 'verif-footer-warn')
              : ''"

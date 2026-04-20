@@ -1,41 +1,47 @@
 <div x-show="$store.cab.activeTab==='seances'" x-data="cabinetSeances">
 
-  <div class="sessions-head">
-    <div class="section-label">Historique des séances</div>
-    <button class="btn-add" @click="$store.cab.openModal('session', null)">+ Séance</button>
+  <div class="flex justify-between items-center mb-3.5">
+    <div class="section-label" style="margin:0">Historique des séances</div>
+    <button class="bg-primary text-white rounded-lg px-2.5 py-[5px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-primary-darker"
+            @click="$store.cab.openModal('session', null)">+ Séance</button>
   </div>
 
-  <div x-show="$store.cab.activeSessions.length === 0" class="no-sessions">
+  <div x-show="$store.cab.activeSessions.length === 0" class="text-center py-[30px] text-zinc-500 dark:text-zinc-400 text-[13px]">
     Aucune séance enregistrée
   </div>
 
   <template x-for="s in $store.cab.activeSessions" :key="s.id">
-    <div class="session-card">
+    <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg mb-2.5 overflow-hidden">
 
-      <div class="session-card-head" @click="toggleCard(s.id)">
+      <div class="flex justify-between items-center px-3.5 py-2.5 bg-zinc-100 dark:bg-zinc-800 cursor-pointer transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700"
+           @click="toggleCard(s.id)">
         <div>
-          <div class="session-date"
+          <div class="text-[13px] font-medium"
                x-text="s.date + (s.heure ? ' · ' + s.heure : '') + (s.duree ? ' · ' + s.duree + ' min' : '')"></div>
-          <div class="session-motif" x-text="s.motif || '—'"></div>
-          <div class="client-meta"
+          <div class="text-[12px] text-zinc-500 dark:text-zinc-400" x-text="s.motif || '—'"></div>
+          <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5"
                x-text="(s.status || 'scheduled') + ' · ' + (s.appointment_type || 'shiatsu_futon')"></div>
         </div>
-        <div class="session-card-actions">
-          <a class="gcal-link" x-show="s.google_event_link"
+        <div class="flex items-center gap-2">
+          <a class="text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 no-underline border border-zinc-200 dark:border-zinc-600 rounded px-[5px] py-px tracking-[.03em] transition-colors hover:text-primary hover:border-primary"
+             x-show="s.google_event_link"
              :href="s.google_event_link" target="_blank" rel="noopener"
              @click.stop title="Ouvrir dans Google Calendar">Cal</a>
-          <button class="btn-ghost btn-sm"
-                  @click.stop="$store.cab.openModal('session', s)">&#9998;</button>
-          <button class="delete-btn"
+          <button class="btn-ghost btn-sm" @click.stop="$store.cab.openModal('session', s)">&#9998;</button>
+          <button class="bg-transparent border-none text-zinc-400 dark:text-zinc-500 text-[11px] cursor-pointer px-1.5 py-0.5 rounded transition-colors hover:text-primary"
                   @click.stop="$store.cab.deleteSession(s.id)">&#10005;</button>
         </div>
       </div>
 
-      <div class="session-card-body" :class="{open: openCards[s.id]}">
-        <div class="session-body-tabs">
-          <div class="stab" :class="{active: getCardTab(s.id)==='clinique'}"
+      <div class="px-3.5 py-3.5 border-t border-zinc-200 dark:border-zinc-700" x-show="openCards[s.id]">
+
+        {# Sub-tabs #}
+        <div class="flex mb-3.5 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden">
+          <div class="flex-1 text-center px-3.5 py-1.5 text-[12px] cursor-pointer transition-colors"
+               :class="getCardTab(s.id)==='clinique' ? 'bg-primary text-white' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
                @click="setCardTab(s.id,'clinique')">Clinique</div>
-          <div class="stab" :class="{active: getCardTab(s.id)==='energetique'}"
+          <div class="flex-1 text-center px-3.5 py-1.5 text-[12px] cursor-pointer transition-colors"
+               :class="getCardTab(s.id)==='energetique' ? 'bg-primary text-white' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
                @click="setCardTab(s.id,'energetique')">Bilan</div>
         </div>
 
@@ -47,7 +53,7 @@
           </div>
           <div x-show="s.exercices">
             <div class="obs-label">Exercices transmis</div>
-            <div style="margin-top:4px">
+            <div class="mt-1">
               <template x-for="pill in exercicePills(s.exercices)" :key="pill">
                 <span class="pill-ex" x-text="pill"></span>
               </template>
@@ -58,7 +64,7 @@
             <div class="obs-text" x-text="s.prochaine"></div>
           </div>
           <div x-show="!s.observations && !s.exercices && !s.prochaine"
-               style="font-size:12px;color:var(--cab-text-sec)">Aucune note clinique</div>
+               class="text-[12px] text-zinc-500 dark:text-zinc-400">Aucune note clinique</div>
         </div>
 
         {# Bilan énergétique #}
@@ -66,26 +72,26 @@
           <div class="internal-badge">Usage interne — non communiqué au client</div>
           <div class="section-label">État des méridiens</div>
           <div x-show="!s.bilan || !activeMeridians(s.bilan).length"
-               style="font-size:12px;color:var(--cab-text-sec);margin-bottom:12px">
+               class="text-[12px] text-zinc-500 dark:text-zinc-400 mb-3">
             Aucun bilan enregistré
           </div>
-          <div style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:12px">
+          <div class="flex flex-wrap gap-[5px] mb-3">
             <template x-for="m in activeMeridians(s.bilan)" :key="m.id">
-              <span style="font-size:12px;color:var(--cab-text-sec)" x-text="m.name + ' : '"></span>
+              <span class="text-[12px] text-zinc-500 dark:text-zinc-400" x-text="m.name + ' : '"></span>
               <span class="energie-chip" :class="stateClass(m.state)" x-text="stateLabel(m.state)"></span>
             </template>
           </div>
           <div x-show="s.bilan?.element_dominant">
             <div class="obs-label">Élément dominant</div>
-            <div class="obs-text" style="margin-bottom:8px" x-text="s.bilan?.element_dominant"></div>
+            <div class="obs-text mb-2" x-text="s.bilan?.element_dominant"></div>
           </div>
           <div x-show="s.bilan?.synthese_mtc">
             <div class="obs-label">Synthèse MTC</div>
-            <div class="obs-text" style="margin-bottom:8px" x-text="s.bilan?.synthese_mtc"></div>
+            <div class="obs-text mb-2" x-text="s.bilan?.synthese_mtc"></div>
           </div>
           <div x-show="s.bilan?.prise_en_charge">
             <div class="obs-label">Points / zones travaillés</div>
-            <div class="obs-text" style="margin-bottom:8px" x-text="s.bilan?.prise_en_charge"></div>
+            <div class="obs-text mb-2" x-text="s.bilan?.prise_en_charge"></div>
           </div>
           <div x-show="s.bilan?.evolution">
             <div class="obs-label">Évolution perçue</div>

@@ -1,67 +1,90 @@
-<div class="sidebar" x-data="cabinetSidebar"
+<div class="sidebar bg-zinc-100 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-700 flex flex-col max-md:h-[calc(100dvh-8rem)]" x-data="cabinetSidebar"
   @set-sidebar-view.window="setView($event.detail)">
 
-  <div class="sidebar-nav">
-    <div class="snav" :class="{active: view==='clients' && !$store.cab.showHelp}"
+  {# ── Nav tabs ── #}
+  <div class="flex border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900">
+    <div class="flex-1 py-2 px-1 text-[11px] font-medium text-center cursor-pointer border-b-2 transition-colors"
+         :class="(view==='clients' && !$store.cab.showHelp) ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-700 dark:hover:text-zinc-200'"
          @click="$store.cab.showHelp=false; setView('clients')">Clients</div>
-    <div class="snav" :class="{active: view==='agenda' && !$store.cab.showHelp}"
+    <div class="flex-1 py-2 px-1 text-[11px] font-medium text-center cursor-pointer border-b-2 transition-colors"
+         :class="(view==='agenda' && !$store.cab.showHelp) ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-700 dark:hover:text-zinc-200'"
          @click="$store.cab.showHelp=false; setView('agenda')">Agenda</div>
-    <div class="snav" :class="{active: $store.cab.showHelp}"
+    <div class="flex-1 py-2 px-1 text-[11px] font-medium text-center cursor-pointer border-b-2 transition-colors"
+         :class="$store.cab.showHelp ? 'text-primary border-primary' : 'text-zinc-500 dark:text-zinc-400 border-transparent hover:text-zinc-700 dark:hover:text-zinc-200'"
          @click="$store.cab.showHelp=!$store.cab.showHelp">Aide</div>
   </div>
 
-  {# ── Clients ── #}
-  <div class="sidebar-head" x-show="view==='clients'">
-    <span class="sidebar-title">Clients</span>
-    <div style="display:flex;gap:6px">
-      <button class="btn-add" @click="$store.cab.openModal('new-client')">+ Nouveau</button>
-      <button class="btn-add btn-import" @click="$store.cab.openModal('import')" title="Importer clients ou rendez-vous">&#8645; Import</button>
+  {# ── Clients header ── #}
+  <div class="py-3.5 px-4 border-b border-zinc-200 dark:border-zinc-700 flex items-center justify-between" x-show="view==='clients'">
+    <span class="text-[13px] font-medium">Clients</span>
+    <div class="flex gap-1.5">
+      <button class="bg-primary text-white rounded-lg px-2.5 py-[5px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-primary-darker"
+              @click="$store.cab.openModal('new-client')">+ Nouveau</button>
+      <button class="bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-[5px] text-[12px] font-medium cursor-pointer transition-colors hover:bg-zinc-100 dark:hover:bg-zinc-800"
+              @click="$store.cab.openModal('import')" title="Importer clients ou rendez-vous">&#8645; Import</button>
     </div>
   </div>
 
-  <div id="sidebar_clients_body" x-show="view==='clients'"
-       style="display:flex;flex-direction:column;flex:1;min-height:0">
-    <div class="search-wrap">
+  {# ── Clients body ── #}
+  <div id="sidebar_clients_body" x-show="view==='clients'" class="flex flex-col flex-1 min-h-0">
+
+    {# Search #}
+    <div class="px-3 py-2.5 border-b border-zinc-200 dark:border-zinc-700">
       <input type="text" placeholder="Rechercher…"
+             class="w-full text-[13px] px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-600 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-200 outline-none transition-colors focus:border-primary font-[inherit]"
              x-model="$store.cab.searchQuery"
              @input="$store.cab.currentPage=1; $store.cab.renderList()"
              autocomplete="off" autocorrect="off" autocapitalize="off"
              spellcheck="false" data-1p-ignore data-lpignore>
     </div>
-    <div class="clients-browser">
-      <div class="alpha-bar">
+
+    {# Browser: alpha bar + list #}
+    <div class="flex flex-1 min-h-0 overflow-hidden">
+
+      {# Alphabet bar #}
+      <div class="w-[22px] shrink-0 bg-zinc-100 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-700 overflow-y-auto flex flex-col items-center py-[3px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <template x-for="item in $store.cab.alphabetLetters" :key="item.letter">
-          <div class="alpha-letter"
-               :class="{'alpha-selected': item.selected, 'alpha-has': item.hasClients && !item.selected, 'alpha-empty': !item.hasClients}"
+          <div class="text-[10px] font-semibold leading-[1.7] w-5 text-center rounded transition-colors"
+               :class="{
+                 'text-primary bg-[color-mix(in_srgb,var(--color-primary)_12%,transparent)] cursor-pointer': item.selected,
+                 'text-zinc-700 dark:text-zinc-200 cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-700': item.hasClients && !item.selected,
+                 'text-zinc-400 dark:text-zinc-500 cursor-default': !item.hasClients
+               }"
                @click="item.hasClients && $store.cab.setLetter(item.letter)"
                x-text="item.letter"></div>
         </template>
       </div>
-      <div class="client-list">
+
+      {# Client list #}
+      <div class="flex-1 overflow-y-auto">
         <template x-for="client in $store.cab.clientList" :key="client._id">
-          <div class="client-item"
-               :class="{active: $store.cab.activeId === client._id}"
+          <div class="px-3.5 py-2.5 cursor-pointer border-b border-zinc-200 dark:border-zinc-700 transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700"
+               :class="$store.cab.activeId === client._id ? 'bg-zinc-200 dark:bg-zinc-700 border-l-[3px] border-l-primary' : ''"
                @click="$store.cab.selectClient(client._id)">
-            <div class="client-name" x-text="client.first_name + ' ' + client.last_name"></div>
-            <div class="client-meta" x-text="client.motif || '—'"></div>
-            <div class="client-badge" x-show="client._sessionCount > 0"
+            <div class="text-[13px] font-medium" x-text="client.first_name + ' ' + client.last_name"></div>
+            <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5" x-text="client.motif || '—'"></div>
+            <div class="inline-block text-[10px] px-1.5 py-px rounded-full mt-0.5 text-primary bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] border border-[color-mix(in_srgb,var(--color-primary)_25%,transparent)]"
+                 x-show="client._sessionCount > 0"
                  x-text="client._sessionCount + ' séance' + (client._sessionCount > 1 ? 's' : '')"></div>
           </div>
         </template>
-        <div x-show="$store.cab.clientList.length === 0"
-             style="padding:16px;text-align:center;font-size:12px;color:var(--cab-text-sec)">
+        <div x-show="$store.cab.clientList.length === 0" class="p-4 text-center text-[12px] text-zinc-500 dark:text-zinc-400">
           Aucun client
-          <div x-show="$store.cab.loadState === 'error'" style="margin-top:8px;color:#a33;font-size:11px" x-text="$store.cab.loadError"></div>
-          <button type="button" class="btn-verif" style="margin-top:8px" @click="$store.cab.load()">Recharger</button>
+          <div x-show="$store.cab.loadState === 'error'" class="mt-2 text-[11px] text-red-600 dark:text-red-400" x-text="$store.cab.loadError"></div>
+          <button type="button" class="btn-verif mt-2" @click="$store.cab.load()">Recharger</button>
         </div>
       </div>
     </div>
-    <div class="pagination" x-show="$store.cab.filteredCount > $store.cab.pageSize">
-      <button class="page-btn"
+
+    {# Pagination #}
+    <div class="flex items-center justify-center gap-2 py-1.5 px-3 border-t border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0"
+         x-show="$store.cab.filteredCount > $store.cab.pageSize">
+      <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-0.5 text-[15px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-[1.4] transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-35 disabled:cursor-not-allowed"
               :disabled="$store.cab.currentPage <= 1"
               @click="$store.cab.goToPage($store.cab.currentPage - 1)">&#8249;</button>
-      <span class="page-info" x-text="$store.cab.currentPage + ' / ' + Math.ceil($store.cab.filteredCount / $store.cab.pageSize)"></span>
-      <button class="page-btn"
+      <span class="text-[11px] text-zinc-500 dark:text-zinc-400 min-w-9 text-center"
+            x-text="$store.cab.currentPage + ' / ' + Math.ceil($store.cab.filteredCount / $store.cab.pageSize)"></span>
+      <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-0.5 text-[15px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-[1.4] transition-colors hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 disabled:opacity-35 disabled:cursor-not-allowed"
               :disabled="$store.cab.currentPage >= Math.ceil($store.cab.filteredCount / $store.cab.pageSize)"
               @click="$store.cab.goToPage($store.cab.currentPage + 1)">&#8250;</button>
     </div>

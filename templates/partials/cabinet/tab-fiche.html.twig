@@ -1,27 +1,33 @@
 <div x-show="$store.cab.activeTab==='fiche'">
 
-  <div class="stats-row">
-    <div class="stat-card">
-      <div class="stat-icon">📋</div>
-      <div class="stat-n" x-text="$store.cab.activeSessionCount"></div>
-      <div class="stat-l">Séances</div>
+  {# ── Stats ── #}
+  <div class="grid grid-cols-4 gap-2.5 mb-5 max-md:grid-cols-2">
+    <div class="bg-zinc-100 dark:bg-zinc-800 rounded-[10px] pt-3.5 px-2.5 pb-2.5 text-center border border-zinc-200 dark:border-zinc-700 transition-shadow hover:shadow-md">
+      <div class="text-[16px] mb-1 opacity-70">📋</div>
+      <div class="text-lg font-semibold text-primary leading-tight" x-text="$store.cab.activeSessionCount"></div>
+      <div class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase tracking-[.4px]">Séances</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon">🕐</div>
-      <div class="stat-n"
+    <div class="bg-zinc-100 dark:bg-zinc-800 rounded-[10px] pt-3.5 px-2.5 pb-2.5 text-center border border-zinc-200 dark:border-zinc-700 transition-shadow hover:shadow-md">
+      <div class="text-[16px] mb-1 opacity-70">🕐</div>
+      <div class="text-lg font-semibold text-primary leading-tight"
            x-text="$store.cab.lastSessionDate ? new Date($store.cab.lastSessionDate + 'T12:00').toLocaleDateString('fr-FR', {day:'numeric', month:'short'}) : '—'"></div>
-      <div class="stat-l">Dernière séance</div>
+      <div class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase tracking-[.4px]">Dernière séance</div>
     </div>
-    <div class="stat-card" :class="{'stat-card--next': $store.cab.nextSessionLabel}">
-      <div class="stat-icon">📅</div>
-      <div class="stat-n" x-text="$store.cab.nextSessionLabel || '—'"></div>
-      <div class="stat-l">Prochaine séance</div>
+    <div class="rounded-[10px] pt-3.5 px-2.5 pb-2.5 text-center border transition-shadow hover:shadow-md"
+         :class="$store.cab.nextSessionLabel
+           ? 'border-primary bg-[color-mix(in_srgb,var(--color-primary)_6%,var(--color-zinc-100))] dark:bg-[color-mix(in_srgb,var(--color-primary)_6%,var(--color-zinc-800))]'
+           : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'">
+      <div class="text-[16px] mb-1 opacity-70">📅</div>
+      <div class="text-lg font-semibold leading-tight"
+           :class="$store.cab.nextSessionLabel ? 'text-primary' : 'text-primary'"
+           x-text="$store.cab.nextSessionLabel || '—'"></div>
+      <div class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase tracking-[.4px]">Prochaine séance</div>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon">🗂️</div>
-      <div class="stat-n"
+    <div class="bg-zinc-100 dark:bg-zinc-800 rounded-[10px] pt-3.5 px-2.5 pb-2.5 text-center border border-zinc-200 dark:border-zinc-700 transition-shadow hover:shadow-md">
+      <div class="text-[16px] mb-1 opacity-70">🗂️</div>
+      <div class="text-lg font-semibold text-primary leading-tight"
            x-text="$store.cab.activeClient?.created ? new Date($store.cab.activeClient.created).toLocaleDateString('fr-FR', {day:'numeric', month:'short', year:'numeric'}) : '—'"></div>
-      <div class="stat-l">Dossier créé</div>
+      <div class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase tracking-[.4px]">Dossier créé</div>
     </div>
   </div>
 
@@ -56,7 +62,7 @@
   </div>
 
   {# ── Lien Grav ── #}
-  <div class="section-block">
+  <div class="mt-5">
     <div class="section-label">Lien Grav</div>
     <div class="grav-section">
       <template x-if="$store.cab.activeClient?.grav_uuid">
@@ -98,7 +104,7 @@
       </template>
 
       <template x-if="!$store.cab.activeClient?.grav_uuid">
-        <div style="font-size:12px;color:var(--cab-text-sec);margin-top:6px">
+        <div class="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1.5">
           La recherche utilise l'email du client en priorité, puis le nom et prénom. Une fois lié, vous pourrez ouvrir directement sa page client.
         </div>
       </template>
