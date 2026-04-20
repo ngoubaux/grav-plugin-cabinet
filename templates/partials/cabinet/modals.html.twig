@@ -155,6 +155,56 @@
       <button class="btn-save" @click="save()">Enregistrer et connecter</button>
     </div>
 
+    {# ── Import données ── #}
+    <div x-show="$store.cab.modal.type==='import'" x-data="cabinetImportModal">
+      <div class="modal-head">
+        <span class="modal-title">Import données</span>
+        <button class="btn-close" @click="$store.cab.closeModal()">&#215;</button>
+      </div>
+      <div class="modal-tab-nav">
+        <div class="stab" :class="{active: tab==='clients'}"    @click="switchTab('clients')">Clients (CSV)</div>
+        <div class="stab" :class="{active: tab==='rendezvous'}" @click="switchTab('rendezvous')">Rendez-vous (ICS)</div>
+      </div>
+      <div class="field-grid">
+        <div class="field field-full">
+          <label x-text="tab === 'clients' ? 'Fichier CSV' : 'Fichier ICS'"></label>
+          <input type="file" :accept="tab === 'clients' ? '.csv,text/csv' : '.ics,text/calendar'" @change="onFile($event)">
+          <span class="field-hint" x-show="tab === 'clients'">Colonnes : email, prenom, nom — optionnelles : telephone, code_postal</span>
+          <span class="field-hint" x-show="tab === 'rendezvous'">Export Google Calendar / Resalib.fr (.ics)</span>
+        </div>
+        <div class="field field-full">
+          <label class="cab-toggle-label">
+            <button type="button" role="switch" :aria-checked="dryRun" @click="dryRun = !dryRun"
+                    class="cab-toggle" :class="dryRun ? 'cab-toggle-on' : ''">
+              <span class="cab-toggle-thumb"></span>
+            </button>
+            <span class="cab-toggle-text"
+                  x-text="dryRun ? 'Simulation — aucune donnée modifiée' : 'Import réel — les données seront modifiées'"></span>
+          </label>
+        </div>
+      </div>
+      <button class="btn-save" :disabled="running || !file"
+              @click="run()"
+              x-text="running ? 'En cours…' : (dryRun ? 'Simuler' : 'Importer')"></button>
+      <div x-show="result" style="margin-top:14px">
+        <div class="import-stats" x-show="result?.stats">
+          <span class="imp-create" x-text="'Créés : '      + (result?.stats?.created ?? 0)"></span>
+          <span class="imp-update" x-text="'Mis à jour : ' + (result?.stats?.updated ?? 0)"></span>
+          <span class="imp-skip"   x-text="'Ignorés : '    + (result?.stats?.skipped ?? 0)"></span>
+          <span class="imp-error"  x-text="'Erreurs : '    + (result?.stats?.errors  ?? 0)"></span>
+          <span x-show="result?.dry_run" style="font-style:italic;color:var(--cab-text-sec)">(simulation)</span>
+        </div>
+        <div class="import-log">
+          <template x-for="(entry, i) in (result?.log || [])" :key="i">
+            <div class="import-log-entry" :class="actionClass(entry.action)">
+              <span class="imp-action" x-text="entry.action"></span>
+              <span x-text="entry.msg"></span>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
     {# ── Vérification globale ── #}
     <div x-show="$store.cab.modal.type==='verif'" x-data>
       <div class="modal-head">

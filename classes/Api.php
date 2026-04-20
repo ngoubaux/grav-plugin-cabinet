@@ -21,6 +21,9 @@ class Api
     /** @var \Grav\Plugin\Cabinet\Facturation */
     private $facturation;
 
+    /** @var \Grav\Plugin\Cabinet\Import */
+    private $import;
+
     /** @var \Grav\Plugin\Cabinet\Sms */
     private $sms;
 
@@ -30,6 +33,7 @@ class Api
         \Grav\Plugin\Cabinet\Communication $communication,
         \Grav\Plugin\Cabinet\Seances $seances,
         \Grav\Plugin\Cabinet\Facturation $facturation,
+        \Grav\Plugin\Cabinet\Import $import,
         \Grav\Plugin\Cabinet\Sms $sms
     ) {
         $this->core = $core;
@@ -37,6 +41,7 @@ class Api
         $this->communication = $communication;
         $this->seances = $seances;
         $this->facturation = $facturation;
+        $this->import = $import;
         $this->sms = $sms;
     }
 
@@ -133,6 +138,17 @@ class Api
         if ($path === '/api/cabinet/facturation' && $method === 'GET') {
             $this->core->requireGravSession();
             $this->core->jsonExit($this->seances->buildFacturationPayload());
+        }
+
+        // ── Import ────────────────────────────────────────────────────────────
+        if ($path === '/api/cabinet/import/clients' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->import->handleImportClients();
+        }
+
+        if ($path === '/api/cabinet/import/rendezvous' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->import->handleImportRendezvous();
         }
 
         if ($path === '/api/contacts/search' && $method === 'GET') {

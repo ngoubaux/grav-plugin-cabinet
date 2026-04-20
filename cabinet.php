@@ -11,6 +11,7 @@ use Grav\Plugin\Cabinet\Clients;
 use Grav\Plugin\Cabinet\Core;
 use Grav\Plugin\Cabinet\Facturation;
 use Grav\Plugin\Cabinet\Seances;
+use Grav\Plugin\Cabinet\Import;
 use Grav\Plugin\Cabinet\Sms;
 
 require_once __DIR__ . '/classes/Core.php';
@@ -19,6 +20,7 @@ require_once __DIR__ . '/classes/Communication.php';
 require_once __DIR__ . '/classes/Clients.php';
 require_once __DIR__ . '/classes/Seances.php';
 require_once __DIR__ . '/classes/Facturation.php';
+require_once __DIR__ . '/classes/Import.php';
 require_once __DIR__ . '/classes/Sms.php';
 require_once __DIR__ . '/classes/Flex/RendezVousObject.php';
 require_once __DIR__ . '/classes/Flex/ClientObject.php';
@@ -42,6 +44,9 @@ class CabinetPlugin extends Plugin
 
     /** @var Facturation|null */
     private $facturation;
+
+    /** @var Import|null */
+    private $import;
 
     /** @var Sms|null */
     private $sms;
@@ -217,7 +222,8 @@ class CabinetPlugin extends Plugin
         $this->communication = new Communication($this->core);
         $this->facturation = new Facturation($this->core);
         $this->seances = new Seances($this->core, $this->facturation, $this->communication);
-        $this->sms = new Sms($this->core);
+        $this->import  = new Import($this->core);
+        $this->sms     = new Sms($this->core);
 
         $this->api = new Api(
             $this->core,
@@ -225,6 +231,7 @@ class CabinetPlugin extends Plugin
             $this->communication,
             $this->seances,
             $this->facturation,
+            $this->import,
             $this->sms
         );
     }

@@ -92,6 +92,74 @@ function cabinetNewClientModal() {
   };
 }
 
+function cabinetImportModal() {
+  return {
+    tab: 'clients',
+    dryRun: true,
+    file: null,
+    running: false,
+    result: null,
+
+    init() {
+      this.$watch('$store.cab.modal.open', (open) => {
+        if (open && Alpine.store('cab').modal.type === 'import') this.reset();
+      });
+    },
+
+    reset() {
+      this.file    = null;
+      this.running = false;
+      this.result  = null;
+      const inp    = this.$el?.querySelector('input[type=file]');
+      if (inp) inp.value = '';
+    },
+
+    switchTab(t) {
+      this.tab    = t;
+      this.result = null;
+      this.file   = null;
+      const inp   = this.$el?.querySelector('input[type=file]');
+      if (inp) inp.value = '';
+    },
+
+    onFile(e) {
+      this.file   = e.target.files[0] || null;
+      this.result = null;
+    },
+
+    async run() {
+      if (!this.file) { alert('Sélectionnez un fichier'); return; }
+      this.running = true;
+      this.result  = null;
+      const fd     = new FormData();
+      fd.append('file',    this.file);
+      fd.append('dry_run', this.dryRun ? '1' : '0');
+      const endpoint = this.tab === 'clients'
+        ? '/api/cabinet/import/clients'
+        : '/api/cabinet/import/rendezvous';
+      try {
+        const resp = await fetch(endpoint, {method: 'POST', body: fd});
+        const data = await resp.json();
+        this.result = data;
+        if (!data.ok && data.error) showToast(data.error, 'error');
+        else if (data.ok && !this.dryRun) Alpine.store('cab').load();
+      } catch(e) {
+        showToast('Erreur réseau : ' + e.message, 'error');
+      } finally {
+        this.running = false;
+      }
+    },
+
+    actionClass(action) {
+      if (action === 'CREATE') return 'imp-create';
+      if (action === 'UPDATE') return 'imp-update';
+      if (action === 'SKIP')   return 'imp-skip';
+      if (action === 'ERROR')  return 'imp-error';
+      return '';
+    },
+  };
+}
+
 function cabinetSettingsModal() {
   return {
     clientId: '',

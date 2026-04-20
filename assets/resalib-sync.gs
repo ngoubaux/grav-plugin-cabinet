@@ -33,7 +33,7 @@
 const CONFIG = {
   /** ID du calendrier Google connecté à Resalib.
    *  Visible dans Paramètres du calendrier → « Adresse de l'agenda » */
-  CALENDAR_ID: '88180a270e70804f0b25edc7cc9195c27ecc43204d832082825087a72e0cef21@group.calendar.google.com',
+  CALENDAR_ID: 'REMPLACER@group.calendar.google.com',
 
   /** URL publique de ce script déployé en Application Web.
    *  Disponible après "Déployer → Nouveau déploiement".
@@ -41,7 +41,7 @@ const CONFIG = {
   WEBHOOK_URL: 'https://script.google.com/macros/s/REMPLACER/exec',
 
   /** URL de base du site Grav (sans slash final) */
-  CABINET_BASE_URL: 'https://www.goubs.net',
+  CABINET_BASE_URL: 'https://monsite.com',
 
   /** Clé API définie dans user/plugins/cabinet/cabinet.yaml → api_key */
   CABINET_API_KEY: 'REMPLACER',

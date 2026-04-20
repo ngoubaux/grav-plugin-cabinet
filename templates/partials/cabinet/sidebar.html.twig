@@ -13,7 +13,10 @@
   {# ── Clients ── #}
   <div class="sidebar-head" x-show="view==='clients'">
     <span class="sidebar-title">Clients</span>
-    <button class="btn-add" @click="$store.cab.openModal('new-client')">+ Nouveau</button>
+    <div style="display:flex;gap:6px">
+      <button class="btn-add" @click="$store.cab.openModal('new-client')">+ Nouveau</button>
+      <button class="btn-add btn-import" @click="$store.cab.openModal('import')" title="Importer clients ou rendez-vous">&#8645; Import</button>
+    </div>
   </div>
 
   <div id="sidebar_clients_body" x-show="view==='clients'"

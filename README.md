@@ -18,6 +18,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 8. [Intégration Google (OAuth, Drive, Agenda)](#intégration-google)
 9. [SMS — Multi-provider](#sms--multi-provider)
 10. [Android natif — File d'attente SMS (MacroDroid / Termux)](#android-natif--file-dattente-sms-macrodroid--termux)
+11. [Import de données](#import-de-données)
 12. [Synchronisation Resalib (Google Apps Script)](#synchronisation-resalib)
 13. [API REST](#api-rest)
 14. [Scheduler Grav — Rappels automatiques](#scheduler-grav)
@@ -37,6 +38,7 @@ Plugin de gestion de cabinet pour praticiens (shiatsu, sophrologie, etc.), const
 | **Bilan PDF** | Visualisation et upload des bilans Boox (NoteAir) depuis Google Drive |
 | **Facturation** | Récapitulatif des séances réalisées par client |
 | **SMS** | Envoi direct du SMS de préparation via fournisseur configurable (SMSMobileAPI, Simple SMS Gateway ou **android_queue**) + fallback local confirmé + rappels automatiques J-1 |
+| **Import** | Import en masse de clients (CSV) et de rendez-vous (ICS) depuis l'interface, avec mode simulation |
 | **Resalib Sync** | Script Google Apps Script pour synchroniser les RDV Resalib → Cabinet |
 | **API REST** | Endpoints JSON sécurisés (session Grav ou clé API) pour intégration avec Make.com ou scripts tiers |
 | **Menu Admin** | Entrée « Cabinet » dans la navigation Grav Admin (accès rapide `fa-briefcase`) |
@@ -327,8 +329,8 @@ Exemple Android natif (MacroDroid ou Termux) :
 
 ```yaml
 sms_enabled: true
-sms_provider: 'macrodroid'
-api_key: 'votre-cle-api'   # utilisée comme Bearer token dans MacroDroid
+sms_provider: 'android_queue'
+sms_push_token: 'votre-token-push'   # optionnel — injecté dans les scripts Android
 ```
 
 Voir la [section Android natif](#android-natif--file-dattente-sms-macrodroid--termux) pour la configuration complète.
@@ -501,7 +503,7 @@ Dans MacroDroid : appuyer sur **+** (bas de l'écran) → **Créer un macro** �
    - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue`
    - **Méthode** : `GET`
 4. Appuyer sur l'onglet **En-têtes** → **+** → ajouter :
-   - Clé : `Authorization` / Valeur : `Bearer VOTRE_API_KEY`
+   - Clé : `X-Api-Key` / Valeur : `VOTRE_TOKEN`
    - Clé : `Accept` / Valeur : `application/json`
 5. Onglet **Réponse** → cocher **Enregistrer la réponse dans une variable** → nom : `queue_response`
 6. OK
@@ -550,7 +552,7 @@ Dans MacroDroid : appuyer sur **+** (bas de l'écran) → **Créer un macro** �
    - **URL** : `https://VOTRE_SITE/api/cabinet/sms/queue/{sms_id}/ack`
    - **Méthode** : `POST`
 4. Onglet **En-têtes** → **+** :
-   - `Authorization` : `Bearer VOTRE_API_KEY`
+   - `X-Api-Key` : `VOTRE_TOKEN`
    - `Content-Type` : `application/json`
 5. Onglet **Corps** → `{"status":"sent"}`
 6. OK
@@ -578,8 +580,9 @@ Dans MacroDroid : appuyer sur **+** (bas de l'écran) → **Créer un macro** �
 
 | Placeholder | Valeur |
 |-------------|--------|
-| `VOTRE_SITE` | URL de votre site Grav, ex : `https://monsite.com` |
-| `VOTRE_API_KEY` | Valeur de `api_key` dans `cabinet.yaml` |
+| `VOTRE_TOKEN` | Valeur de `sms_push_token` (ou `api_key` si `sms_push_token` est vide) — envoyée dans l'en-tête `X-Api-Key` |
+
+---
 
 ### Flux complet (Termux ou MacroDroid)
 
@@ -607,36 +610,179 @@ Dans l'onglet **Communication** de chaque client, les SMS passent automatiquemen
 
 ---
 
+## Import de données
+
+L'interface propose un import en masse accessible via le bouton **⇅ Import** dans la sidebar (vue Clients).
+
+### Clients — CSV
+
+Importe un fichier CSV depuis un export Resalib ou tout autre source.
+
+**Format attendu** (première ligne = en-têtes) :
+
+```
+email,prenom,nom,telephone,code_postal
+alice@example.com,Alice,DUPONT,0612345678,75010
+```
+
+| Colonne | Requis | Description |
+| ------- | ------ | ----------- |
+| `email` | Oui | Adresse email |
+| `prenom` | Oui | Prénom |
+| `nom` | Oui | Nom de famille |
+| `telephone` | Non | Normalisé automatiquement (`06…` → `+336…`) |
+| `code_postal` | Non | Stocké dans le champ Notes |
+
+**Logique de déduplication** : recherche d'abord par téléphone, puis par email. Si un client correspondant est trouvé, il est mis à jour ; sinon un nouveau dossier est créé avec un UUID généré.
+
+### Rendez-vous — ICS
+
+Importe un fichier `.ics` (export Google Calendar, Resalib, etc.).
+
+**Format SUMMARY attendu** :
+
+```
+Prénom NOM | Resalib.fr
+```
+
+Le dernier token tout en majuscules est interprété comme le nom de famille. La correspondance client se fait par prénom + nom (insensible aux accents).
+
+| Champ ICS | Champ Cabinet |
+| --------- | ------------- |
+| `DTSTART` | Date + heure (converti Europe/Paris) |
+| `DTEND` | Durée calculée en minutes |
+| `STATUS` | `CONFIRMED` → `confirmed`, `TENTATIVE` → `planned`, `CANCELLED` → `cancelled` |
+| `DESCRIPTION` | Type de séance (`chaise` → `shiatsu_chair`, `sophrologie`, sinon `shiatsu_futon`) + motif |
+| `UID` | Stocké dans `observations` pour la traçabilité |
+
+**Logique de déduplication** : un rendez-vous existant sur le même triplet `(client, date, heure)` est mis à jour ; sinon il est créé.
+
+### Mode simulation
+
+Le toggle **Simulation** (activé par défaut) prévisualise les opérations sans modifier aucune donnée. Le résultat affiche le log complet (CREATE / UPDATE / SKIP / ERROR) et les compteurs. Désactiver le toggle pour effectuer l'import réel.
+
+### Scripts CLI
+
+Les mêmes imports sont aussi disponibles en ligne de commande (hors interface) :
+
+```bash
+# Import clients
+BASE_URL=https://monsite.com API_KEY=ma-cle python3 import_clients.py clients.csv
+
+# Import rendez-vous (mode simulation)
+DRY_RUN=1 BASE_URL=https://monsite.com API_KEY=ma-cle python3 import_rendezvous.py agenda.ics
+```
+
+---
+
 ## Synchronisation Resalib
 
-Le fichier `assets/resalib-sync.gs` est un **Google Apps Script** qui synchronise les événements Resalib → Cabinet via l'API REST.
+Le fichier `assets/resalib-sync.gs` est un **Google Apps Script** qui synchronise en temps réel les rendez-vous Resalib (via Google Calendar) vers Cabinet, en utilisant les push notifications de l'API Google Calendar.
+
+### Architecture
+
+```
+Resalib
+  → écrit les RDV dans un Google Calendar partagé
+
+Google Calendar (push notifications)
+  → POST à l'URL du script déployé (WEBHOOK_URL) à chaque modification
+
+Google Apps Script (resalib-sync.gs)
+  → sync incrémentale (token de sync)
+  → résolution du client Cabinet par email ou nom
+  → POST/PUT/DELETE /api/cabinet/rendezvous
+```
+
+Un déclencheur toutes les 15 minutes assure la sync même si un push est manqué. Le watch channel est renouvelé automatiquement chaque nuit avant expiration (7 jours max).
 
 ### Installation
 
-1. [script.google.com](https://script.google.com) → Nouveau projet → coller `resalib-sync.gs`.
-2. Services → ajouter **Google Calendar API**.
-3. Configurer la section `CONFIG` :
+1. [script.google.com](https://script.google.com) → **Nouveau projet** → coller `resalib-sync.gs`.
+2. **Services → +** → ajouter **Google Calendar API**.
+3. Remplir la section `CONFIG` du script :
 
 ```javascript
 const CONFIG = {
-  CALENDAR_ID:      'xxxx@group.calendar.google.com',
+  CALENDAR_ID:      'xxxx@group.calendar.google.com', // calendrier Resalib
+  WEBHOOK_URL:      'https://script.google.com/macros/s/XXXX/exec', // URL du script déployé
   CABINET_BASE_URL: 'https://monsite.com',
-  CABINET_API_KEY:  'votre-cle-api',
+  CABINET_API_KEY:  'votre-cle-api',                  // cabinet.yaml → api_key
 };
 ```
 
-4. Déployer → Application web → Accès : Tout le monde.
-5. Exécuter **`setupAll()`** une seule fois.
+4. **Déployer → Nouveau déploiement** → Type : Application web → Exécuter en tant que : Moi → Accès : Tout le monde → copier l'URL dans `WEBHOOK_URL`.
+5. Exécuter **`setupAll()`** une seule fois depuis la console Apps Script.
 
-### Fonctions utiles
+### Paramètres CONFIG
+
+| Paramètre | Description |
+| --------- | ----------- |
+| `CALENDAR_ID` | ID du calendrier Google connecté à Resalib (visible dans ses paramètres) |
+| `WEBHOOK_URL` | URL de déploiement du script (disponible après le déploiement) |
+| `CABINET_BASE_URL` | URL du site Grav sans slash final |
+| `CABINET_API_KEY` | Valeur de `api_key` dans `cabinet.yaml` |
+| `SYNC_DAYS_PAST` | Fenêtre passée de la sync initiale (défaut : 7 jours) |
+| `SYNC_DAYS_FUTURE` | Fenêtre future de la sync initiale (défaut : 90 jours) |
+| `DEFAULT_APPOINTMENT_TYPE` | Type de séance si non détecté (défaut : `shiatsu_futon`) |
+| `DEFAULT_DURATION_MINUTES` | Durée par défaut si `DTEND` absent (défaut : 60) |
+| `TYPE_PATTERNS` | Regex → `appointment_type` (testés sur titre + description) |
+| `STATUS_PATTERNS` | Regex → statut Cabinet (testés sur le titre de l'événement) |
+
+### Format des événements Resalib
+
+**SUMMARY** : `Prénom NOM | Resalib.fr`  
+Le dernier token tout en majuscules est le nom de famille (même règle que `import_rendezvous.py`).
+
+**DESCRIPTION** (format multi-lignes) :
+
+```
+À domicile              ← optionnel, ignoré
+Prénom NOM              ← nom du client, ignoré (déjà dans SUMMARY)
+Consultation (Suivi) - Cabinet Cagnes-sur-Mer  ← motif
+Details : https://resalib.fr/…                 ← ignoré
+Annulation : https://resalib.fr/…              ← ignoré
+Message utilisateur : texte libre              ← observations
+```
+
+### Résolution du client Cabinet
+
+Pour chaque événement entrant, le script résout l'UUID Cabinet dans cet ordre :
+
+1. **Email attendee** — si l'événement a un participant, son email est cherché dans la map locale.
+2. **Nom extrait du SUMMARY** — clé `"prénom nom"` (minuscules) dans la map locale.
+3. **Appel API** `GET /api/contacts/search?first_name=…&last_name=…` — les accents sont supprimés pour la comparaison. Si trouvé, le mapping est mis en cache.
+4. **Introuvable** → événement ignoré avec un message dans les logs.
+
+Si un client n'est pas trouvé automatiquement, utiliser `addClientMapping()` (voir ci-dessous).
+
+### Déclencheurs installés par `setupAll()`
+
+| Déclencheur | Fréquence | Rôle |
+| ----------- | --------- | ---- |
+| `doPost` | Push Google Calendar | Sync incrémentale à chaque modification |
+| `_incrementalOrFull` | Toutes les 15 min | Filet de sécurité si push manqué |
+| `renewWatchIfNeeded` | Quotidien à 2h | Renouvelle le watch channel avant expiration |
+
+### Fonctions console
 
 | Fonction | Description |
-|----------|-------------|
-| `setupAll()` | Installation initiale |
-| `refreshCalendar()` | Sync complète forcée |
-| `inspectEventMap()` | Correspondance eventId → flex_id |
-| `addClientMapping('Prénom NOM', 'uuid')` | Mapping manuel |
-| `resetAll()` | Remet tout à zéro |
+| -------- | ----------- |
+| `setupAll()` | Installation initiale : déclencheurs + watch + sync complète |
+| `refreshCalendar()` | Sync complète forcée (efface le token et repart de zéro) |
+| `resetAll()` | Remet tout à zéro (déclencheurs, watch, maps, token) |
+| `inspectEventMap()` | Affiche la map `eventId → {flex_id, client_id}` |
+| `inspectClientMap()` | Affiche la map `"prénom nom" → uuid Cabinet` |
+| `addClientMapping('Prénom NOM', 'uuid')` | Ajoute manuellement un mapping client |
+| `forceSyncEvent('eventId')` | Force la sync d'un événement précis par son ID Google |
+
+**Exemple — mapping manuel :**
+
+```javascript
+// Depuis la console Apps Script (Ctrl+Entrée)
+addClientMapping('Maryse DIGAT | Resalib.fr', 'a1b2c3d4e5f6…')
+// équivalent : addClientMapping('Maryse DIGAT', 'a1b2c3d4e5f6…')
+```
 
 ---
 
@@ -666,6 +812,8 @@ Authentification : **session Grav** ou en-tête `X-Api-Key`.
 | `POST` | `/api/cabinet/sms/queue/{id}/ack` | Mettre à jour le statut d'un SMS : body `{"status":"sent"}` ou `{"status":"error","error":"raison"}` |
 | `GET` | `/api/cabinet/termux/bootstrap` | Script bash bootstrap pré-configuré (URL + clé API injectées par Grav) — param `?sim=N` |
 | `GET` | `/api/cabinet/termux/sms-queue` | Script Python SMS pré-configuré (URL + clé API injectées par Grav) — param `?sim=N` |
+| `POST` | `/api/cabinet/import/clients` | Importer des clients depuis un CSV (multipart `file` + `dry_run`) |
+| `POST` | `/api/cabinet/import/rendezvous` | Importer des rendez-vous depuis un ICS (multipart `file` + `dry_run`) |
 | `GET` | `/api/contacts/search` | Rechercher un client par nom/email |
 | `GET` | `/cabinet/bilan-template.pdf` | Télécharger le template PDF |
 
@@ -728,6 +876,7 @@ user/plugins/cabinet/
 │   ├── Seances.php                   # CRUD clients & rendez-vous, payload de données
 │   ├── Communication.php             # Gestion des communications (lecture, écriture, suppression)
 │   ├── Facturation.php               # Calcul du récapitulatif de facturation
+│   ├── Import.php                    # Import en masse clients (CSV) et rendez-vous (ICS)
 │   ├── Sms.php                       # Envoi SMS (SMSMobileAPI) + rappels J-1
 │   └── Flex/
 │       ├── ClientObject.php          # Classe Flex personnalisée — clients
