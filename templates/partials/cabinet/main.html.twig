@@ -1,11 +1,17 @@
 <div class="main" id="mainArea" x-data="cabinetMain">
 
-  <div class="status-bar" x-data="cabinetStatusBar">
+  <div class="status-bar" x-data="{...cabinetStatusBar(), ...cabinetDriveBar()}">
     <div class="status-bar-left">
       <span class="status-queue" :class="$store.cab.queueCount > 0 ? 'status-queue--active' : ''">
         <span class="status-queue-dot" :class="$store.cab.queueCount > 0 ? 'active' : ''"></span>
         <span x-text="$store.cab.queueCount > 0 ? $store.cab.queueCount + ' SMS en attente' : 'File SMS vide'"></span>
       </span>
+      <div class="status-sep"></div>
+      <span class="status-drive" :class="statusState" @click="toggleDrive()" :title="statusLabel" style="cursor:pointer">
+        <span class="drive-dot" :class="statusState"></span>
+        <span x-text="connected ? 'Drive' : 'Drive off'"></span>
+      </span>
+      <button class="status-icon-btn" x-show="connected" @click="openVerif()" title="Vérifier Drive">✓</button>
     </div>
     <div class="status-bar-right">
       <span x-text="Object.keys($store.cab.clients).length + ' clients'"></span>

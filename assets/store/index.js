@@ -190,6 +190,8 @@ const cabStore = {
     this.bilanFile=undefined;
     delete _bilanFileCache[resolved];
     this.initCommunicationDraft('sms');
+    const letter=String(this.clients[resolved]?.last_name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()[0]||null;
+    if(letter&&/[A-Z]/.test(letter)){this.selectedLetter=letter;this.currentPage=1;this.renderList();}
     document.getElementById('app')?.classList.toggle('client-open',true);
     window.dispatchEvent(new CustomEvent('cabinet:client-selected',{detail:resolved}));
   },

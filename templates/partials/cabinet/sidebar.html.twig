@@ -67,15 +67,5 @@
   {# ── Agenda ── #}
   {% include 'partials/cabinet/sidebar-agenda.html.twig' %}
 
-  {# ── Drive bar ── #}
-  <div class="drive-bar" x-data="cabinetDriveBar">
-    <div class="drive-status">
-      <div class="drive-dot" :class="statusState"></div>
-      <span x-text="statusLabel"></span>
-      <button class="btn-drive" @click="toggleDrive()"
-              x-text="connected ? 'Déconnecter Drive' : 'Connecter Drive'"></button>
-      <button class="btn-verif" x-show="connected" @click="openVerif()">Vérifier</button>
-    </div>
-  </div>
 
 </div>
