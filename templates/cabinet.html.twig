@@ -33,9 +33,9 @@
 {% endblock %}
 
 {% block body %}
-<section class="flex-1 overflow-hidden flex flex-col bg-zinc-100 dark:bg-zinc-800 pt-32">
-  <div class="flex-1 overflow-hidden flex items-start justify-center p-4 bg-zinc-100 dark:bg-zinc-800 max-md:p-0 max-md:items-stretch">
-    <div class="grid grid-cols-[260px_1fr] w-full max-w-[1200px] border border-zinc-200 dark:border-zinc-700 rounded-xl overflow-hidden bg-white dark:bg-zinc-900 shadow-sm h-full min-h-0 max-md:grid-cols-1 max-md:rounded-none max-md:border-x-0 max-md:border-b-0 max-md:min-h-[calc(100dvh-8rem)] max-md:h-auto" id="app" x-data>
+<section class="flex-1 overflow-hidden flex flex-col pt-32">
+  <div class="flex-1 overflow-hidden flex items-stretch p-0">
+    <div class="grid grid-cols-[260px_1fr] w-full overflow-hidden bg-white dark:bg-zinc-900 h-full min-h-0 max-md:grid-cols-1 max-md:border-x-0 max-md:border-b-0 max-md:min-h-[calc(100dvh-8rem)] max-md:h-auto" id="app" x-data>
       {% include 'partials/cabinet/sidebar.html.twig' %}
       {% include 'partials/cabinet/main.html.twig' %}
     </div>
