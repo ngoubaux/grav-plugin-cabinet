@@ -1,5 +1,17 @@
 <!-- markdownlint-disable MD022 MD051 -->
 
+# 2.0.1
+
+## 04/20/2026
+
+1. [](#new)
+   * Ajout de routes configurables pour respecter davantage la philosophie Grav : `route_app_base` (page) et `route_api_base` (API).
+   * Support des routes dynamiques dans la résolution des endpoints API et des assets front du template Cabinet.
+
+2. [](#improved)
+   * Documentation README mise à jour pour les routes configurables (configuration, setup, API REST, scripts Termux).
+   * Exemples API généralisés en `{route_api_base}` et route PDF en `{route_app_base}` pour éviter le couplage à `/cabinet`.
+
 # 2.0.0
 
 ## 04/20/2026
