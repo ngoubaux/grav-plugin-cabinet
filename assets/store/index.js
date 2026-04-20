@@ -445,9 +445,16 @@ const cabStore = {
       return false;
     }
 
-    const transport=channel==='sms'
+    const smsOutcome = channel==='sms'
       ? await this._sendClientSms(String(c.phone||''), message)
+      : null;
+    const transport = channel==='sms'
+      ? String(smsOutcome?.transport || 'unknown')
       : this._openClientEmail(String(c.email||''), subject, message);
+    const status = channel==='sms'
+      ? String(smsOutcome?.status || 'prepared')
+      : 'prepared';
+    const errorMessage = channel==='sms' ? String(smsOutcome?.errorMessage || '') : '';
 
     await this.logCommunication({
       channel,
@@ -456,7 +463,8 @@ const cabStore = {
       message,
       followUpAt,
       transport,
-      status: transport==='api' ? 'sent' : (transport==='cancelled' ? 'cancelled' : 'prepared'),
+      status,
+      errorMessage,
     });
     this.initCommunicationDraft(channel);
     return true;
@@ -465,15 +473,21 @@ const cabStore = {
   async _sendClientSms(phone, message) {
     const cleanPhone=String(phone||'').replace(/\s+/g,'');
     let shouldFallbackToLocal=true;
+    let apiError='';
 
     if(this.smsEnabled) {
       const resp=await apiCall('POST','/api/cabinet/sms/preparation',{phone:cleanPhone,message});
       if(resp?.ok) {
+        if(resp.queued) {
+          showToast('SMS mis en file d\'attente ✓');
+          return {transport:'api-queued', status:'prepared', errorMessage:''};
+        }
         showToast('SMS envoyé ✓');
-        return 'api';
+        return {transport:'api', status:'sent', errorMessage:''};
       }
       // API échoue : afficher erreur et fallback
-      showToast('Erreur API : '+(resp?.error||'inconnue'),'error');
+      apiError=String(resp?.error||'inconnue');
+      showToast('Erreur API : '+apiError,'error');
       shouldFallbackToLocal=confirm('L\'envoi API a échoué. Ouvrir l\'application SMS locale ?');
     } else {
       shouldFallbackToLocal=confirm('Envoi API désactivé. Ouvrir l\'application SMS locale ?');
@@ -481,7 +495,7 @@ const cabStore = {
 
     if(!shouldFallbackToLocal) {
       showToast('Envoi annulé');
-      return 'cancelled';
+      return {transport:'cancelled', status: this.smsEnabled ? 'error' : 'cancelled', errorMessage: apiError};
     }
 
     showToast('Basculement mode local...');
@@ -496,7 +510,7 @@ const cabStore = {
       window.location.href=smsLink;
       showToast('SMS préparé...');
     }
-    return 'deeplink';
+    return {transport:'deeplink', status:'prepared', errorMessage: apiError};
   },
 
   _openClientEmail(email, subject, message) {
@@ -520,6 +534,7 @@ const cabStore = {
       id: uid(),
       createdAt: new Date().toISOString(),
       status: 'prepared',
+      errorMessage: '',
       ...entry,
     });
     this.saveCommunications();

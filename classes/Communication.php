@@ -43,6 +43,8 @@ class Communication
                 'status' => (string) ($arr['status'] ?? 'prepared'),
                 'followUpAt' => (string) ($arr['follow_up_at'] ?? ''),
                 'transport' => (string) ($arr['transport'] ?? ''),
+                'sentAt' => (string) ($arr['sent_at'] ?? ''),
+                'errorMessage' => (string) ($arr['error_message'] ?? ''),
             ];
         }
 
@@ -85,6 +87,8 @@ class Communication
             $obj->status = (string) ($entry['status'] ?? 'prepared');
             $obj->follow_up_at = (string) ($entry['followUpAt'] ?? '');
             $obj->transport = (string) ($entry['transport'] ?? '');
+            $obj->sent_at = (string) ($entry['sentAt'] ?? '');
+            $obj->error_message = (string) ($entry['errorMessage'] ?? '');
             $obj->save();
         }
 

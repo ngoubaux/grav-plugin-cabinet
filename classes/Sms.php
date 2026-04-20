@@ -60,6 +60,8 @@ class Sms
      */
     private function queueViaAndroid(string $phone, string $message, string $clientUuid = ''): array
     {
+        $clientUuid = $this->normalizeUuid($clientUuid);
+
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
         if (!$flex) {
@@ -345,9 +347,10 @@ class Sms
     {
         $raw  = file_get_contents('php://input');
         $body = json_decode($raw, true) ?? [];
-        $clientId = trim((string) ($body['client_id'] ?? ''));
+        $clientIdRaw = trim((string) ($body['client_id'] ?? ''));
+        $clientId = $this->normalizeUuid($clientIdRaw);
 
-        if ($clientId === '') {
+        if ($clientIdRaw === '') {
             $this->core->jsonExit(['ok' => false, 'error' => 'client_id requis'], 400);
             return;
         }
@@ -366,6 +369,9 @@ class Sms
         }
 
         $client = $clientsDir->getObject($clientId);
+        if (!$client && $clientIdRaw !== $clientId) {
+            $client = $clientsDir->getObject($clientIdRaw);
+        }
         if (!$client) {
             $this->core->jsonExit(['ok' => false, 'error' => 'Client non trouvé'], 404);
             return;
@@ -383,7 +389,7 @@ class Sms
             $this->core->jsonExit(['ok' => false, 'error' => 'Template SMS préparation visite non configuré'], 400);
             return;
         }
-        $result = $this->send($phone, $message);
+        $result = $this->send($phone, $message, $clientId);
         $this->core->jsonExit($result, (int) ($result['status'] ?? ($result['ok'] ? 200 : 422)));
     }
 
@@ -483,6 +489,11 @@ class Sms
             $phone = '+33' . substr($phone, 1);
         }
         return $phone;
+    }
+
+    private function normalizeUuid(string $value): string
+    {
+        return strtolower(str_replace('-', '', trim($value)));
     }
 
     private function buildRappelMessage(string $firstName, string $heure): string
