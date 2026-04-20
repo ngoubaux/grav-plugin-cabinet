@@ -10,7 +10,7 @@ class Sms
     private const DEFAULT_PROVIDER = 'smsmobileapi';
     private const SIMPLE_GATEWAY_PROVIDER = 'simple_sms_gateway';
     private const LEGACY_HTTP_GATEWAY_PROVIDER = 'http_gateway';
-    private const MACRODROID_PROVIDER = 'macrodroid';
+    private const ANDROID_QUEUE_PROVIDER = 'android_queue';
 
     /** @var \Grav\Plugin\Cabinet\Core */
     private $core;
@@ -25,7 +25,7 @@ class Sms
     /**
      * Send a single SMS.
      *
-     * @param string $clientUuid Optional — used by MacroDroid provider to link the queued
+     * @param string $clientUuid Optional — used by android_queue provider to link the queued
      *                           SMS to a client record in the communications history.
      * @return array{ok: bool, error?: string}
      */
@@ -40,8 +40,8 @@ class Sms
 
         $provider = $this->getProvider();
 
-        if ($provider === self::MACRODROID_PROVIDER) {
-            return $this->queueViaMacroDroid($phone, $message, $clientUuid);
+        if ($provider === self::ANDROID_QUEUE_PROVIDER) {
+            return $this->queueViaAndroid($phone, $message, $clientUuid);
         }
 
         if ($provider === self::SIMPLE_GATEWAY_PROVIDER || $provider === self::LEGACY_HTTP_GATEWAY_PROVIDER) {
@@ -52,13 +52,13 @@ class Sms
     }
 
     /**
-     * MacroDroid provider: write a `prepared` SMS into the communications queue.
-     * MacroDroid polls GET /api/cabinet/sms/queue, sends via Android SMS radio,
+     * android_queue provider: write a `prepared` SMS into the communications queue.
+     * MacroDroid or Termux polls GET /api/cabinet/sms/queue, sends via Android SMS radio,
      * then calls POST /api/cabinet/sms/queue/{id}/ack to mark it sent.
      *
      * @return array{ok: bool, queued?: bool, error?: string}
      */
-    private function queueViaMacroDroid(string $phone, string $message, string $clientUuid = ''): array
+    private function queueViaAndroid(string $phone, string $message, string $clientUuid = ''): array
     {
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
@@ -74,7 +74,7 @@ class Sms
                 try {
                     $flex->addDirectoryType('communications', $blueprint);
                 } catch (\Throwable $e) {
-                    $this->core->debugLog('macrodroid queue: addDirectoryType failed', ['error' => $e->getMessage()]);
+                    $this->core->debugLog('android_queue: addDirectoryType failed', ['error' => $e->getMessage()]);
                 }
             }
             $dir = $flex->getDirectory('communications');
@@ -92,11 +92,11 @@ class Sms
         $obj->message     = $message;
         $obj->status      = 'prepared';
         $obj->created_at  = date('c');
-        $obj->transport   = 'macrodroid';
+        $obj->transport   = 'android_queue';
         $obj->client_uuid = $clientUuid;
         $obj->save();
 
-        $this->core->debugLog('SMS queued for MacroDroid', ['id' => $id, 'to' => $phone]);
+        $this->core->debugLog('SMS queued for Android', ['id' => $id, 'to' => $phone]);
 
         return ['ok' => true, 'queued' => true];
     }
@@ -425,12 +425,19 @@ class Sms
     private function getSimpleGatewayToken(): string
     {
         $config = Grav::instance()['config'];
+
+        // Unified push token (preferred).
+        $value = trim((string) $config->get('plugins.cabinet.sms_push_token', ''));
+        if ($value !== '') {
+            return $value;
+        }
+
+        // Backward compatibility with previous key names.
         $value = trim((string) $config->get('plugins.cabinet.sms_simple_gateway_token', ''));
         if ($value !== '') {
             return $value;
         }
 
-        // Backward compatibility with previous key name.
         return trim((string) $config->get('plugins.cabinet.sms_http_gateway_token', ''));
     }
 

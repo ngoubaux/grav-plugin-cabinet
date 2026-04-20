@@ -13,10 +13,10 @@ drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'
 
 sms_enabled: false
 sms_api_key: ''
-# macrodroid = file d'attente polled par MacroDroid sur Android (gratuit, sans app tierce)
+# android_queue = file d'attente polled par MacroDroid ou Termux sur Android (gratuit, sans app tierce)
 sms_provider: 'smsmobileapi'
 sms_simple_gateway_url: ''
-sms_simple_gateway_token: ''
+sms_push_token: ''
 sms_http_gateway_url: ''
 sms_http_gateway_token: ''
 sms_rappel_cron: '0 8 * * *'
