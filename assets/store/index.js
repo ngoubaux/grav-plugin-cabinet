@@ -76,6 +76,13 @@ const cabStore = {
     return cleanId ? `/preparons-votre-visite/id:${cleanId}` : '/preparons-votre-visite';
   },
   get nextSession() { return getPreferredSession(this.sessions[this.activeId]||[]); },
+  get queueCount() {
+    let n = 0;
+    Object.values(this.communications || {}).forEach(list => {
+      if (Array.isArray(list)) n += list.filter(x => x.channel === 'sms' && x.status === 'prepared').length;
+    });
+    return n;
+  },
   get lastSessionDate() {
     const list = this.sessions[this.activeId]||[];
     if(!list.length) return null;

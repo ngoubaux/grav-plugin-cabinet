@@ -1,5 +1,25 @@
 <div class="main" id="mainArea" x-data="cabinetMain">
 
+  <div class="status-bar" x-data="cabinetStatusBar">
+    <div class="status-bar-left">
+      <span class="status-queue" :class="$store.cab.queueCount > 0 ? 'status-queue--active' : ''">
+        <span class="status-queue-dot" :class="$store.cab.queueCount > 0 ? 'active' : ''"></span>
+        <span x-text="$store.cab.queueCount > 0 ? $store.cab.queueCount + ' SMS en attente' : 'File SMS vide'"></span>
+      </span>
+    </div>
+    <div class="status-bar-right">
+      <span x-text="Object.keys($store.cab.clients).length + ' clients'"></span>
+      <div class="status-sep"></div>
+      <a class="status-link" :href="gcalUrl" target="_blank" rel="noopener" title="Google Calendar">📅 Agenda</a>
+      <template x-if="$store.cab.communicationSettings.googleReviewUrl">
+        <a class="status-link"
+           :href="$store.cab.communicationSettings.googleReviewUrl"
+           target="_blank" rel="noopener" title="Avis Google">⭐ Avis</a>
+      </template>
+      <button class="status-icon-btn" @click="$store.cab.openModal('settings')" title="Paramètres">⚙</button>
+    </div>
+  </div>
+
   {% include 'partials/cabinet/tab-aide.html.twig' %}
 
   <div class="empty-state" x-show="!$store.cab.activeId && !$store.cab.showHelp">

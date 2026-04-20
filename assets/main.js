@@ -19,6 +19,7 @@ document.addEventListener('alpine:init', () => {
   Alpine.data('cabinetNewClientModal', cabinetNewClientModal);
   Alpine.data('cabinetSettingsModal',  cabinetSettingsModal);
   Alpine.data('cabinetDriveBar',       cabinetDriveBar);
+  Alpine.data('cabinetStatusBar',      cabinetStatusBar);
 
   Alpine.store('cab').load();
 });

@@ -300,6 +300,19 @@
   .modal-overlay{align-items:flex-end}
 }
 
+/* ── Status bar ── */
+.status-bar{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:34px;border-bottom:1px solid var(--cab-border);background:var(--cab-surface);flex-shrink:0;gap:10px;font-size:11px;color:var(--cab-text-sec)}
+.status-bar-left,.status-bar-right{display:flex;align-items:center;gap:8px}
+.status-queue{display:flex;align-items:center;gap:5px;transition:color .2s}
+.status-queue--active{color:var(--cab-accent);font-weight:600}
+.status-queue-dot{width:6px;height:6px;border-radius:50%;background:var(--cab-border);flex-shrink:0;transition:background .2s}
+.status-queue-dot.active{background:var(--cab-accent);animation:pulse 1.5s ease-in-out infinite}
+.status-sep{width:1px;height:14px;background:var(--cab-border);flex-shrink:0}
+.status-link{display:inline-flex;align-items:center;gap:3px;color:var(--cab-text-sec);text-decoration:none;padding:2px 7px;border-radius:5px;border:1px solid var(--cab-border);transition:color .12s,border-color .12s,background .12s;line-height:1.5;white-space:nowrap}
+.status-link:hover{color:var(--cab-accent);border-color:var(--cab-accent);background:color-mix(in srgb,var(--cab-accent) 5%,transparent)}
+.status-icon-btn{background:none;border:1px solid var(--cab-border);border-radius:5px;padding:2px 6px;font-size:12px;cursor:pointer;color:var(--cab-text-sec);line-height:1.5;transition:color .12s,border-color .12s,background .12s;font-family:inherit}
+.status-icon-btn:hover{color:var(--cab-accent);border-color:var(--cab-accent);background:color-mix(in srgb,var(--cab-accent) 5%,transparent)}
+
 /* ── Help / Setup page ──────────────────────────────────────────────────────── */
 .help-wrap{padding:20px;overflow-y:auto;flex:1}
 .help-config-bar{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;padding:12px;background:var(--cab-surface);border:1px solid var(--cab-border);border-radius:10px;align-items:center}

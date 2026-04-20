@@ -4,6 +4,17 @@ function cabinetMain() {
   return {};
 }
 
+function cabinetStatusBar() {
+  return {
+    gcalUrl: 'https://calendar.google.com/calendar/r',
+
+    init() {
+      const calId = localStorage.getItem('gcal_calendar_id');
+      if (calId) this.gcalUrl = `https://calendar.google.com/calendar/r?cid=${encodeURIComponent(calId)}`;
+    },
+  };
+}
+
 function cabinetDriveBar() {
   return {
     connected:   false,
