@@ -52,9 +52,15 @@ class Core
 
         $headers = function_exists('getallheaders') ? getallheaders() : [];
         $received = $headers['X-Api-Key'] ?? $headers['x-api-key'] ?? ($_SERVER['HTTP_X_API_KEY'] ?? '');
-        $expected = trim((string) $this->grav()['config']->get('plugins.cabinet.api_key', ''));
+        $config   = $this->grav()['config'];
+        $mainKey  = trim((string) $config->get('plugins.cabinet.api_key', ''));
+        $pushToken = trim((string) $config->get('plugins.cabinet.sms_push_token', ''));
 
-        if (!empty($expected) && $received === $expected) {
+        if (!empty($mainKey) && $received === $mainKey) {
+            return;
+        }
+
+        if (!empty($pushToken) && $received === $pushToken) {
             return;
         }
 

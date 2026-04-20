@@ -183,10 +183,11 @@ class Api
 
     private function serveTermuxScript(string $template, string $filename): void
     {
-        $grav    = Grav::instance();
-        $baseUrl = rtrim((string) ($grav['base_url_absolute'] ?? ''), '/');
-        $apiKey  = (string) $grav['config']->get('plugins.cabinet.api_key', '');
-        $simSlot = (string) ($grav['uri']->query('sim') ?? '');
+        $grav      = Grav::instance();
+        $baseUrl   = rtrim((string) ($grav['base_url_absolute'] ?? ''), '/');
+        $pushToken = trim((string) $grav['config']->get('plugins.cabinet.sms_push_token', ''));
+        $apiKey    = $pushToken !== '' ? $pushToken : (string) $grav['config']->get('plugins.cabinet.api_key', '');
+        $simSlot   = (string) ($grav['uri']->query('sim') ?? '');
 
         $vars = [
             'cabinet_url'  => $baseUrl,
