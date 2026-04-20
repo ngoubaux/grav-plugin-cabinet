@@ -21,6 +21,18 @@ sms_http_gateway_token: ''
 sms_rappel_cron: '0 8 * * *'
 
 communication_google_review_url: ''
-communication_template_prep_visite: "Bonjour {{first_name}},\n\nAfin de préparer notre première séance{{session_slot}}.\nJe vous partage ce lien : {{preparation_link}}\n\n📍 60 chemin du Val Fleuri 🔐 Code portillon : 2507A 🏢 Bât B6 appt 08, 3ème étage, porte de gauche (\u00e0 droite de la piscine)\n⏱️ Durée : {{duration}} - Tarif : 75€ 👕 Tenue : vêtements souples, chaussettes propres\n\nÀ bientôt, Nicolas\nLe shiatsu est une approche d’accompagnement au bien-être qui ne se substitue pas à un traitement médical."
+communication_template_prep_visite: "Bonjour {{first_name}},\n\nAfin de préparer notre première séance{{session_slot}}, je vous partage ce lien : {{preparation_link}}\n\n⏱️ Durée : {{duration}}\n\nÀ bientôt !"
 communication_template_relance: ''
-communication_template_compte_rendu: "Bonjour {{first_name}},\n\nMerci pour votre confiance suite à notre séance{{session_date_label}}.\n\nSi vous avez trouvé l'accompagnement utile, vous pouvez laisser un avis sur ma fiche Google :\n{{google_review_url}}\n\nVotre retour est précieux et aide d'autres personnes à me trouver.\n\nBien à vous,\nNicolas"
+communication_template_compte_rendu: "Bonjour {{first_name}},\n\nMerci pour votre confiance suite à notre séance{{session_date_label}}.\n\nSi vous avez trouvé l'accompagnement utile, vous pouvez laisser un avis :\n{{google_review_url}}\n\nBien à vous"
+
+# ── Informations praticien (utilisées dans l'email de bienvenue) ──────────────
+practitioner_name: 'Nicolas Goubaux'
+practitioner_title: 'Praticien Shiatsu – Médiateur de bien-être intérieur'
+practitioner_phone: '0664313056'
+practitioner_website: 'https://www.goubs.net'
+practitioner_booking_url: 'https://www.resalib.fr/praticien/90790-nicolas-goubaux-praticien-shiatsu-cagnes-sur-mer'
+practitioner_address_street: '60 Chemin du Val Fleuri'
+practitioner_address_details: 'Bât. B6 Appt. 08 – 3ème étage, porte de gauche (à droite de la piscine)'
+practitioner_address_city: '06800 Cagnes-sur-Mer'
+practitioner_access_code: '2507A'
+practitioner_first_session_price: '75'

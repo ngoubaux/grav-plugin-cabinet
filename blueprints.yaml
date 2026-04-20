@@ -58,6 +58,63 @@ form:
       help: "* pour tout autoriser, ou une URL précise"
       default: '*'
 
+    praticien:
+      type: section
+      title: Praticien
+      underline: true
+
+    practitioner_name:
+      type: text
+      label: Nom du praticien
+      help: "Affiché dans l'email de bienvenue. Laissez vide pour utiliser le nom de l'auteur du site Grav."
+      placeholder: 'Jean Dupont'
+
+    practitioner_title:
+      type: text
+      label: Titre / spécialité
+      placeholder: 'Praticien Shiatsu'
+
+    practitioner_phone:
+      type: text
+      label: Téléphone
+      placeholder: '06 00 00 00 00'
+
+    practitioner_website:
+      type: text
+      label: Site web
+      placeholder: 'https://monsite.com'
+
+    practitioner_booking_url:
+      type: text
+      label: URL de prise de rendez-vous
+      help: "Lien affiché quand le client n'a pas encore de RDV planifié."
+      placeholder: 'https://calendly.com/moi'
+
+    practitioner_address_street:
+      type: text
+      label: Adresse (rue)
+      placeholder: '1 rue de la Paix'
+
+    practitioner_address_details:
+      type: text
+      label: Complément d'adresse
+      placeholder: 'Bât. A – 2ème étage, porte droite'
+
+    practitioner_address_city:
+      type: text
+      label: Code postal et ville
+      placeholder: '75001 Paris'
+
+    practitioner_access_code:
+      type: text
+      label: Code d'accès
+      placeholder: '1234A'
+
+    practitioner_first_session_price:
+      type: text
+      label: Tarif première séance (€)
+      placeholder: '75'
+
     google:
       type: section
       title: Google

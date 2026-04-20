@@ -1,7 +1,23 @@
+{# ── Template email de bienvenue ─────────────────────────────────────────────
+   Personnalisez ce template dans l'admin Grav → Plugins → Cabinet → Praticien
+   Les champs config utilisés : practitioner_name, practitioner_title, practitioner_phone,
+   practitioner_website, practitioner_booking_url, practitioner_address_*, practitioner_access_code,
+   practitioner_first_session_price
+   ──────────────────────────────────────────────────────────────────────────── #}
+{% set pract_name    = config.plugins.cabinet.practitioner_name|default(grav.config.site.author.name)|e %}
+{% set pract_title   = config.plugins.cabinet.practitioner_title|default('')|e %}
+{% set pract_phone   = config.plugins.cabinet.practitioner_phone|default('')|e %}
+{% set pract_website = config.plugins.cabinet.practitioner_website|default('')|e %}
+{% set pract_booking = config.plugins.cabinet.practitioner_booking_url|default('')|e %}
+{% set pract_street  = config.plugins.cabinet.practitioner_address_street|default('')|e %}
+{% set pract_details = config.plugins.cabinet.practitioner_address_details|default('')|e %}
+{% set pract_city    = config.plugins.cabinet.practitioner_address_city|default('')|e %}
+{% set pract_code    = config.plugins.cabinet.practitioner_access_code|default('')|e %}
+{% set pract_price   = config.plugins.cabinet.practitioner_first_session_price|default('75')|e %}
 <div class="email-container">
         <div class="header">
-            <h1>Bienvenue chez Nicolas Goubaux</h1>
-            <p>Médiateur de bien-être intérieur</p>
+            <h1>Bienvenue chez {{ pract_name }}</h1>
+            <p>{{ pract_title }}</p>
         </div>
         {% set rendez_vous = object.nextAppointment %}
         {% set next_visit_date = rendez_vous ? rendez_vous.appointment_date : null %}
@@ -24,19 +40,19 @@
             {% else %}
             <p><em><strong>Note :</strong> Vous n'avez pas encore de prochain rendez-vous planifié.<br>
             N'hésitez pas à en prendre un dès que vous le souhaitez :</em></p>
-            <p><a href="https://www.resalib.fr/praticien/90790-nicolas-goubaux-praticien-shiatsu-cagnes-sur-mer" style="display:inline-block;padding:10px 20px;background-color:#4a7c59;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;">📅 Prendre un rendez-vous</a></p>
+            <p><a href="{{ pract_booking }}" style="display:inline-block;padding:10px 20px;background-color:#4a7c59;color:#fff;text-decoration:none;border-radius:5px;font-weight:bold;">📅 Prendre un rendez-vous</a></p>
             {% endif %}
             <h2><span class="icon-text">📍</span>Informations pratiques pour votre venue</h2>
 
             <div class="info-box">
                 <h3>Adresse</h3>
-                <p><strong>60 Chemin du Val Fleuri</strong><br>
-                Bât. B6 Appt. 08 - 3ème étage, porte de gauche<br>
-                06800 Cagnes-sur-Mer</p>
+                <p><strong>{{ pract_street }}</strong><br>
+                {{ pract_details }}<br>
+                {{ pract_city }}</p>
             </div>
 
             <h3><span class="icon-text">🔐</span>Accès</h3>
-            <p>En arrivant au 60 chemin du Val Fleuri, vous trouverez un portillon dont le code est : <span class="code-access">2507A</span></p>
+            <p>En arrivant au {{ pract_street }}, vous trouverez un portillon dont le code est : <span class="code-access">{{ pract_code }}</span></p>
             <p>Le bâtiment B6 se situe <strong>à droite de la piscine</strong>, au milieu du jardin d'enfants.<br>
             Je suis au <strong>3ème étage, porte de gauche</strong>.</p>
 
@@ -45,14 +61,13 @@
             <span class="transport-icon">Bus 620/9</span> Arrêt Val Fleuri</p>
 
             <h2><span class="icon-text">✨</span>Votre première séance</h2>
-            {{ rendez_vous.duration_minutes }}
 
             <div class="price-highlight">
                 {# If the object has the tag "Echange", show a specific message, otherwise show the standard first-session details. #}
                 {% if object.tags is defined and 'Echange' in object.tags %}
                     <strong>Note :</strong> Vous avez choisi une séance d'échange. Nous pourrons discuter ensemble de vos besoins et attentes lors de notre rencontre.
                 {% else %}
-                    Pour cette première rencontre, je vous propose une séance de <strong>1h15</strong> au tarif de <strong>75€</strong>.
+                    Pour cette première rencontre, je vous propose une séance de <strong>{{ rendez_vous.duration_minutes }} min</strong> au tarif de <strong>{{ pract_price }}€</strong>.
                 {% endif %}
             </div>
 
@@ -94,16 +109,16 @@
                 <p><strong><span class="icon-text">💬</span>Pour toute question</strong></p>
                 <p>N'hésitez pas à me contacter si vous avez la moindre question avant notre rendez-vous :</p>
                 <p>
-                    <span class="icon-text">📞</span> <a href="tel:0664313056">06 64 31 30 56</a><br>
-                    <span class="icon-text">🌐</span> <a href="https://www.goubs.net">www.goubs.net</a><br>
-                    <span class="icon-text">📅</span> <a href="https://www.resalib.fr/praticien/90790-nicolas-goubaux-praticien-shiatsu-cagnes-sur-mer">Resalib - Mon profil</a>
+                    {% if pract_phone %}<span class="icon-text">📞</span> <a href="tel:{{ pract_phone }}">{{ pract_phone }}</a><br>{% endif %}
+                    {% if pract_website %}<span class="icon-text">🌐</span> <a href="{{ pract_website }}">{{ pract_website|replace({'https://': '', 'http://': ''}) }}</a><br>{% endif %}
+                    {% if pract_booking %}<span class="icon-text">📅</span> <a href="{{ pract_booking }}">Prendre un rendez-vous</a>{% endif %}
                 </p>
             </div>
 
             <div class="signature">
                 <p>Au plaisir de vous rencontrer,</p>
-                <strong>Nicolas Goubaux</strong>
-                <p style="font-size: 14px;">Praticien Shiatsu – Médiateur de bien-être intérieur</p>
+                <strong>{{ pract_name }}</strong>
+                <p style="font-size: 14px;">{{ pract_title }}</p>
             </div>
         </div>
 

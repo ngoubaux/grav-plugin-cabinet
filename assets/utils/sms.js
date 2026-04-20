@@ -37,9 +37,10 @@ function formatSessionSlotForSms(session) {
 function getPreparationVisitLink(client, clientId) {
   const rawId=client&&client.grav_uuid ? client.grav_uuid : clientId;
   const cleanId=compactUuid(rawId);
+  const base=(window.CABINET_SITE_URL||'').replace(/\/+$/,'');
   return cleanId
-    ? `https://www.goubs.net/preparons-votre-visite/id:${cleanId}`
-    : 'https://www.goubs.net/preparons-votre-visite/';
+    ? `${base}/preparons-votre-visite/id:${cleanId}`
+    : `${base}/preparons-votre-visite/`;
 }
 
 function buildPreparationSms(client, sessionList, clientId, template='') {

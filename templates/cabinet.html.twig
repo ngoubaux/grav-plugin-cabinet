@@ -49,6 +49,7 @@
 
 {% include 'partials/cabinet/modals.html.twig' %}
 
+<script>window.CABINET_SITE_URL = '{{ base_url_absolute|raw }}';</script>
 <script>
   if('serviceWorker' in navigator)
     navigator.serviceWorker.register('/cabinet/sw.js?v={{ cab_ver }}').catch(()=>{});

@@ -622,7 +622,8 @@ class Sms
      */
     private function buildPreparationLink($client, string $clientId): string
     {
-        $base = 'https://www.goubs.net/preparons-votre-visite';
+        $grav = Grav::instance();
+        $base = rtrim($grav['uri']->rootUrl(true), '/') . '/preparons-votre-visite';
         $cleanId = $this->compactUuid($clientId);
         return $cleanId ? "$base/id:$cleanId" : $base . '/';
     }
