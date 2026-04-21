@@ -4,7 +4,7 @@
 {% set help_enabled = config.plugins.cabinet.sms_enabled %}
 {% set help_key_ok  = help_key and help_key != 'CHANGE_ME_BEFORE_DEPLOY' %}
 
-<div x-show="$store.cab.showHelp" class="help-wrap"
+<div x-show="$store.cab.showHelp" class="px-5 py-5 overflow-y-auto flex-1"
      x-data="{
        open: 'termux',
        async copy(text, el) {
@@ -15,193 +15,201 @@
        }
      }">
 
-  {# ── En-tête ── #}
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px">
+  <div class="flex items-center justify-between mb-[18px]">
     <div class="section-label" style="margin:0">Guide de configuration</div>
     <button class="btn-ghost btn-sm" @click="$store.cab.showHelp=false">✕ Fermer</button>
   </div>
 
   {# ── État de la configuration ── #}
-  <div class="help-config-bar">
-    <div class="help-config-item">
-      <span class="help-config-label">SMS</span>
+  <div class="flex flex-wrap gap-2 mb-4 p-3 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-[10px] items-center">
+    <div class="flex items-center gap-1.5 text-[12px]">
+      <span class="text-zinc-500 dark:text-zinc-400">SMS</span>
       {% if help_enabled %}
-        <span class="help-chip help-chip-ok">Activé</span>
+        <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-[color-mix(in_srgb,#3B6D11_10%,transparent)] text-[#3B6D11] border border-[color-mix(in_srgb,#3B6D11_30%,transparent)] dark:bg-[color-mix(in_srgb,#81c784_12%,transparent)] dark:text-[#81c784] dark:border-[color-mix(in_srgb,#81c784_30%,transparent)]">Activé</span>
       {% else %}
-        <span class="help-chip help-chip-warn">Désactivé</span>
+        <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-[#fff8e1] text-[#7b5800] border border-[#ffe082] dark:bg-[#2a1f00] dark:border-[#5a4200] dark:text-[#f5c842]">Désactivé</span>
       {% endif %}
     </div>
-    <div class="help-config-item">
-      <span class="help-config-label">Provider</span>
-      <span class="help-config-val">{{ help_prov ?: '—' }}</span>
+    <div class="flex items-center gap-1.5 text-[12px] pl-3 border-l border-zinc-200 dark:border-zinc-700">
+      <span class="text-zinc-500 dark:text-zinc-400">Provider</span>
+      <span class="font-medium font-mono text-[11px]">{{ help_prov ?: '—' }}</span>
     </div>
-    <div class="help-config-item">
-      <span class="help-config-label">Clé API</span>
+    <div class="flex items-center gap-1.5 text-[12px] pl-3 border-l border-zinc-200 dark:border-zinc-700">
+      <span class="text-zinc-500 dark:text-zinc-400">Clé API</span>
       {% if help_key_ok %}
-        <span class="help-chip help-chip-ok">Configurée</span>
-        <span class="help-config-val" style="font-size:10px;opacity:.6">{{ help_key|slice(0,6) }}…</span>
+        <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-[color-mix(in_srgb,#3B6D11_10%,transparent)] text-[#3B6D11] border border-[color-mix(in_srgb,#3B6D11_30%,transparent)] dark:bg-[color-mix(in_srgb,#81c784_12%,transparent)] dark:text-[#81c784] dark:border-[color-mix(in_srgb,#81c784_30%,transparent)]">Configurée</span>
+        <span class="font-mono text-[10px] opacity-60">{{ help_key|slice(0,6) }}…</span>
       {% else %}
-        <span class="help-chip help-chip-error">Non configurée</span>
+        <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium bg-[color-mix(in_srgb,var(--color-primary)_10%,transparent)] text-primary border border-[color-mix(in_srgb,var(--color-primary)_25%,transparent)]">Non configurée</span>
       {% endif %}
     </div>
     {% if not help_enabled or not help_key_ok %}
-    <a href="/admin/plugins/cabinet" class="help-chip help-chip-warn" style="text-decoration:none;cursor:pointer">
+    <a href="/admin/plugins/cabinet"
+       class="inline-flex items-center px-2 py-[2px] rounded-full text-[11px] font-medium no-underline cursor-pointer bg-[#fff8e1] text-[#7b5800] border border-[#ffe082] dark:bg-[#2a1f00] dark:border-[#5a4200] dark:text-[#f5c842]">
       ⚙️ Ouvrir les réglages
     </a>
     {% endif %}
   </div>
 
   {# ── Section : Termux + Cron ── #}
-  <div class="help-section">
-    <div class="help-section-head" @click="open = open==='termux' ? null : 'termux'">
-      <span class="help-section-title">📱 Termux + Cron <span class="help-chip help-chip-ok" style="font-size:10px">Recommandé</span></span>
-      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='termux' ? '▲' : '▼'"></span>
+  <div class="border border-zinc-200 dark:border-zinc-700 rounded-[10px] mb-2.5 overflow-hidden">
+    <div class="flex items-center justify-between px-3.5 py-[11px] cursor-pointer bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors select-none"
+         @click="open = open==='termux' ? null : 'termux'">
+      <span class="text-[13px] font-medium flex items-center gap-2">
+        📱 Termux + Cron
+        <span class="inline-flex items-center px-2 py-[2px] rounded-full text-[10px] font-medium bg-[color-mix(in_srgb,#3B6D11_10%,transparent)] text-[#3B6D11] border border-[color-mix(in_srgb,#3B6D11_30%,transparent)] dark:bg-[color-mix(in_srgb,#81c784_12%,transparent)] dark:text-[#81c784] dark:border-[color-mix(in_srgb,#81c784_30%,transparent)]">Recommandé</span>
+      </span>
+      <span class="text-[11px] text-zinc-400 dark:text-zinc-500" x-text="open==='termux' ? '▲' : '▼'"></span>
     </div>
-    <div class="help-section-body" x-show="open==='termux'">
+    <div class="px-4 py-4 border-t border-zinc-200 dark:border-zinc-700" x-show="open==='termux'">
 
-      <div class="help-note">
+      <div class="text-[12px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 mb-3.5 leading-[1.55]">
         Script Python cron sur votre téléphone Android.
-        <strong>Aucun compte, aucune app tierce.</strong>
+        <strong class="text-zinc-700 dark:text-zinc-200">Aucun compte, aucune app tierce.</strong>
         Nécessite Termux + Termux:API (F-Droid) et le provider
-        <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">android_queue</code>
+        <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">android_queue</code>
         dans les réglages.
       </div>
 
-      <ol class="help-steps">
-        <li class="help-step">
-          <div class="help-step-num">1</div>
-          <div class="help-step-content">
+      <ol class="list-none flex flex-col gap-3">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">1</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Installer <strong>Termux</strong> et <strong>Termux:API</strong> depuis
-            <a href="https://f-droid.org" target="_blank" rel="noopener" style="color:var(--cab-accent)">F-Droid</a>
+            <a href="https://f-droid.org" target="_blank" rel="noopener" class="text-primary">F-Droid</a>
             (pas depuis le Play Store — version Play Store obsolète).
-            <small>Ouvrir Termux:API au moins une fois après installation.</small>
+            <small class="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-[3px]">Ouvrir Termux:API au moins une fois après installation.</small>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">2</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">2</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Dans Termux, lancer la commande d'installation en une seule fois :
-            <div class="help-cmd">
-              <code>curl -fsSL "{{ help_url }}/api/cabinet/termux/bootstrap" \
+            <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+              <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">curl -fsSL "{{ help_url }}/api/cabinet/termux/bootstrap" \
      -H "X-Api-Key: {{ help_key }}" | bash</code>
-              <button class="help-cmd-copy"
+              <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-[3px] text-[11px] cursor-pointer text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 font-[inherit] hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                       @click="copy(`curl -fsSL '{{ help_url }}/api/cabinet/termux/bootstrap' -H 'X-Api-Key: {{ help_key }}' | bash`, $el)">
                 Copier
               </button>
             </div>
-            <small>Pour multi-SIM, ajouter <code>?sim=0</code> ou <code>?sim=1</code> à l'URL.</small>
+            <small class="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-[3px]">Pour multi-SIM, ajouter <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded">?sim=0</code> ou <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded">?sim=1</code> à l'URL.</small>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">3</div>
-          <div class="help-step-content">
-            Le script installe automatiquement : <code style="font-size:11px">python</code>, <code style="font-size:11px">cronie</code>,
-            <code style="font-size:11px">termux-api</code>, configure le cron toutes les 10 min et
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">3</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
+            Le script installe automatiquement : <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">python</code>, <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">cronie</code>,
+            <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">termux-api</code>, configure le cron toutes les 10 min et
             gère le redémarrage Android via Termux:Boot.
-            <small>Installer l'app <strong>Termux:Boot</strong> depuis F-Droid pour que crond redémarre automatiquement.</small>
+            <small class="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-[3px]">Installer l'app <strong>Termux:Boot</strong> depuis F-Droid pour que crond redémarre automatiquement.</small>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">4</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">4</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Tester manuellement l'envoi depuis Termux :
-            <div class="help-cmd">
-              <code>python3 ~/scripts/termux-sms-queue.py</code>
-              <button class="help-cmd-copy" @click="copy('python3 ~/scripts/termux-sms-queue.py', $el)">Copier</button>
+            <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+              <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">python3 ~/scripts/termux-sms-queue.py</code>
+              <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-[3px] text-[11px] cursor-pointer text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 font-[inherit] hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                      @click="copy('python3 ~/scripts/termux-sms-queue.py', $el)">Copier</button>
             </div>
-            <small>Les logs sont dans <code>~/sms-queue.log</code>.</small>
+            <small class="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-[3px]">Les logs sont dans <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded">~/sms-queue.log</code>.</small>
           </div>
         </li>
       </ol>
 
-      <div class="help-divider"></div>
+      <div class="h-px bg-zinc-200 dark:bg-zinc-700 my-3.5"></div>
 
-      <div style="font-size:12px;color:var(--cab-text-sec)">
-        <strong style="color:var(--cab-text)">Flux :</strong>
-        Communication créée → <code style="font-size:11px">status=prepared</code> →
-        Termux envoie via antenne Android → <code style="font-size:11px">status=sent</code> ou <code style="font-size:11px">error</code>
+      <div class="text-[12px] text-zinc-500 dark:text-zinc-400">
+        <strong class="text-zinc-700 dark:text-zinc-200">Flux :</strong>
+        Communication créée → <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">status=prepared</code> →
+        Termux envoie via antenne Android → <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">status=sent</code> ou <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">error</code>
       </div>
     </div>
   </div>
 
   {# ── Section : MacroDroid ── #}
-  <div class="help-section">
-    <div class="help-section-head" @click="open = open==='macrodroid' ? null : 'macrodroid'">
-      <span class="help-section-title">🤖 MacroDroid <span style="font-size:11px;opacity:.7">(alternative sans terminal)</span></span>
-      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='macrodroid' ? '▲' : '▼'"></span>
+  <div class="border border-zinc-200 dark:border-zinc-700 rounded-[10px] mb-2.5 overflow-hidden">
+    <div class="flex items-center justify-between px-3.5 py-[11px] cursor-pointer bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors select-none"
+         @click="open = open==='macrodroid' ? null : 'macrodroid'">
+      <span class="text-[13px] font-medium flex items-center gap-2">
+        🤖 MacroDroid <span class="text-[11px] opacity-70">(alternative sans terminal)</span>
+      </span>
+      <span class="text-[11px] text-zinc-400 dark:text-zinc-500" x-text="open==='macrodroid' ? '▲' : '▼'"></span>
     </div>
-    <div class="help-section-body" x-show="open==='macrodroid'">
+    <div class="px-4 py-4 border-t border-zinc-200 dark:border-zinc-700" x-show="open==='macrodroid'">
 
-      <div class="help-note">
+      <div class="text-[12px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 mb-3.5 leading-[1.55]">
         Alternative sans ligne de commande : macro visuelle sur Android.
-        <strong>Aucun compte.</strong>
-        Même provider <code style="background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px;font-size:11px">android_queue</code> que Termux.
+        <strong class="text-zinc-700 dark:text-zinc-200">Aucun compte.</strong>
+        Même provider <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">android_queue</code> que Termux.
       </div>
 
-      <ol class="help-steps">
-        <li class="help-step">
-          <div class="help-step-num">1</div>
-          <div class="help-step-content">
+      <ol class="list-none flex flex-col gap-3">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">1</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Installer <strong>MacroDroid</strong> depuis le Play Store. Créer un nouveau macro
             <em>Cabinet SMS</em> avec un déclencheur <strong>Minuterie périodique → 10 min</strong>.
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">2</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">2</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Action 1 — <strong>Requête HTTP GET</strong> pour récupérer la file :
-            <div class="help-cmd">
-              <code>GET {{ help_url }}/api/cabinet/sms/queue
+            <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+              <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">GET {{ help_url }}/api/cabinet/sms/queue
 En-tête : X-Api-Key → {{ help_key }}
 Réponse → variable : queue_response</code>
-              <button class="help-cmd-copy"
+              <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-[3px] text-[11px] cursor-pointer text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 font-[inherit] hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                       @click="copy(`{{ help_url }}/api/cabinet/sms/queue`, $el)">
                 Copier URL
               </button>
             </div>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">3</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">3</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Action 2 — <strong>Boucle Pour chaque</strong> : source = tableau JSON,
-            variable JSON = <code>{queue_response}</code>, JSONPath = <code>$.items</code>,
-            variable de boucle = <code>item</code>.
+            variable JSON = <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">{queue_response}</code>, JSONPath = <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">$.items</code>,
+            variable de boucle = <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">item</code>.
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">4</div>
-          <div class="help-step-content">
-            Dans la boucle — extraire <code>$.id</code> → <code>sms_id</code>,
-            <code>$.to</code> → <code>sms_to</code>, <code>$.message</code> → <code>sms_message</code>
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">4</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
+            Dans la boucle — extraire <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">$.id</code> → <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">sms_id</code>,
+            <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">$.to</code> → <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">sms_to</code>, <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">$.message</code> → <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">sms_message</code>
             via <strong>Variables → Définir (JSONPath)</strong>.
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">5</div>
-          <div class="help-step-content">
-            <strong>Messages → Envoyer un SMS</strong> : numéro = <code>{sms_to}</code>,
-            message = <code>{sms_message}</code>.
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">5</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
+            <strong>Messages → Envoyer un SMS</strong> : numéro = <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">{sms_to}</code>,
+            message = <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">{sms_message}</code>.
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">6</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">6</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             <strong>Requête HTTP POST</strong> pour confirmer l'envoi (ACK) :
-            <div class="help-cmd">
-              <code>POST {{ help_url }}/api/cabinet/sms/queue/{sms_id}/ack
+            <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+              <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">POST {{ help_url }}/api/cabinet/sms/queue/{sms_id}/ack
 En-tête : X-Api-Key → {{ help_key }}
 Corps : {"status":"sent"}</code>
-              <button class="help-cmd-copy"
+              <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-[3px] text-[11px] cursor-pointer text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 font-[inherit] hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                       @click="copy(`{{ help_url }}/api/cabinet/sms/queue/`, $el)">
                 Copier URL base
               </button>
             </div>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">7</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">7</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Terminer par une <strong>Fin de boucle</strong> et optionnellement
             une notification <em>SMS Cabinet envoyés ✓</em>.
           </div>
@@ -211,47 +219,48 @@ Corps : {"status":"sent"}</code>
   </div>
 
   {# ── Section : Clé API ── #}
-  <div class="help-section">
-    <div class="help-section-head" @click="open = open==='apikey' ? null : 'apikey'">
-      <span class="help-section-title">🔑 Clé API</span>
-      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='apikey' ? '▲' : '▼'"></span>
+  <div class="border border-zinc-200 dark:border-zinc-700 rounded-[10px] mb-2.5 overflow-hidden">
+    <div class="flex items-center justify-between px-3.5 py-[11px] cursor-pointer bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors select-none"
+         @click="open = open==='apikey' ? null : 'apikey'">
+      <span class="text-[13px] font-medium">🔑 Clé API</span>
+      <span class="text-[11px] text-zinc-400 dark:text-zinc-500" x-text="open==='apikey' ? '▲' : '▼'"></span>
     </div>
-    <div class="help-section-body" x-show="open==='apikey'">
+    <div class="px-4 py-4 border-t border-zinc-200 dark:border-zinc-700" x-show="open==='apikey'">
 
-      <p style="font-size:13px;margin-bottom:12px;line-height:1.6">
-        La clé API (<code style="font-size:11px;background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px">X-Api-Key</code>)
+      <p class="text-[13px] mb-3 leading-[1.6] text-zinc-700 dark:text-zinc-200">
+        La clé API (<code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">X-Api-Key</code>)
         permet aux scripts externes (Termux, MacroDroid) d'accéder à l'API sans session Grav.
-        Si un <strong>Token push</strong> (<code style="font-size:11px;background:var(--cab-surface-alt);padding:1px 5px;border-radius:4px">sms_push_token</code>) est configuré, les scripts Android l'utilisent à la place.
+        Si un <strong>Token push</strong> (<code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded text-[11px]">sms_push_token</code>) est configuré, les scripts Android l'utilisent à la place.
         Elle doit être longue, aléatoire et gardée secrète.
       </p>
 
-      <div class="help-cmd">
-        <code>{{ help_key }}</code>
-        <button class="help-cmd-copy" @click="copy('{{ help_key }}', $el)">Copier</button>
+      <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+        <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">{{ help_key }}</code>
+        <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-[3px] text-[11px] cursor-pointer text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 font-[inherit] hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+                @click="copy('{{ help_key }}', $el)">Copier</button>
       </div>
 
-      <ol class="help-steps" style="margin-top:12px">
-        <li class="help-step">
-          <div class="help-step-num">1</div>
-          <div class="help-step-content">
-            Pour changer la clé, aller dans <a href="/admin/plugins/cabinet" style="color:var(--cab-accent)">
-            Plugins → Cabinet → Clé API</a> et saisir une nouvelle valeur.
-            <small>Exemple de génération : <code>openssl rand -hex 32</code> dans un terminal.</small>
+      <ol class="list-none flex flex-col gap-3 mt-3">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">1</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
+            Pour changer la clé, aller dans <a href="/admin/plugins/cabinet" class="text-primary">Plugins → Cabinet → Clé API</a> et saisir une nouvelle valeur.
+            <small class="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-[3px]">Exemple de génération : <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded">openssl rand -hex 32</code> dans un terminal.</small>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">2</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">2</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Après changement, retélécharger les scripts Termux pour que la nouvelle clé soit injectée :
-            <div class="help-cmd">
-              <code>curl -fsSL "{{ help_url }}/api/cabinet/termux/bootstrap" \
+            <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+              <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">curl -fsSL "{{ help_url }}/api/cabinet/termux/bootstrap" \
      -H "X-Api-Key: NOUVELLE_CLE" | bash</code>
             </div>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">3</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">3</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Mettre à jour la clé dans le macro MacroDroid si vous l'utilisez
             (en-têtes des deux requêtes HTTP).
           </div>
@@ -261,43 +270,44 @@ Corps : {"status":"sent"}</code>
   </div>
 
   {# ── Section : Rappels SMS J-1 ── #}
-  <div class="help-section">
-    <div class="help-section-head" @click="open = open==='rappels' ? null : 'rappels'">
-      <span class="help-section-title">⏰ Rappels automatiques J-1</span>
-      <span style="font-size:11px;color:var(--cab-text-dim)" x-text="open==='rappels' ? '▲' : '▼'"></span>
+  <div class="border border-zinc-200 dark:border-zinc-700 rounded-[10px] mb-2.5 overflow-hidden">
+    <div class="flex items-center justify-between px-3.5 py-[11px] cursor-pointer bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors select-none"
+         @click="open = open==='rappels' ? null : 'rappels'">
+      <span class="text-[13px] font-medium">⏰ Rappels automatiques J-1</span>
+      <span class="text-[11px] text-zinc-400 dark:text-zinc-500" x-text="open==='rappels' ? '▲' : '▼'"></span>
     </div>
-    <div class="help-section-body" x-show="open==='rappels'">
+    <div class="px-4 py-4 border-t border-zinc-200 dark:border-zinc-700" x-show="open==='rappels'">
 
-      <div class="help-note">
+      <div class="text-[12px] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 mb-3.5 leading-[1.55]">
         Le scheduler Grav envoie un SMS de rappel la veille de chaque rendez-vous.
-        Nécessite <strong>sms_enabled: true</strong> et le scheduler Grav actif sur le serveur.
+        Nécessite <strong class="text-zinc-700 dark:text-zinc-200">sms_enabled: true</strong> et le scheduler Grav actif sur le serveur.
       </div>
 
-      <ol class="help-steps">
-        <li class="help-step">
-          <div class="help-step-num">1</div>
-          <div class="help-step-content">
+      <ol class="list-none flex flex-col gap-3">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">1</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Activer SMS dans les réglages (<strong>sms_enabled → Oui</strong>)
             et choisir un provider.
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">2</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">2</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Ajouter le scheduler Grav au cron <strong>du serveur</strong> :
-            <div class="help-cmd">
-              <code>* * * * * cd /chemin/vers/grav && php bin/grav scheduler 1>> /dev/null 2>&1</code>
-              <button class="help-cmd-copy"
+            <div class="flex items-start gap-2 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2.5 my-2">
+              <code class="flex-1 text-[11px] font-mono text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-all leading-[1.65]">* * * * * cd /chemin/vers/grav && php bin/grav scheduler 1>> /dev/null 2>&1</code>
+              <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-md px-2 py-[3px] text-[11px] cursor-pointer text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 font-[inherit] hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
                       @click="copy('* * * * * cd /chemin/vers/grav && php bin/grav scheduler 1>> /dev/null 2>&1', $el)">
                 Copier
               </button>
             </div>
-            <small>Vérifier dans <strong>Outils → Scheduler</strong> que le job <code>cabinet-sms-rappels</code> apparaît.</small>
+            <small class="text-[11px] text-zinc-500 dark:text-zinc-400 block mt-[3px]">Vérifier dans <strong>Outils → Scheduler</strong> que le job <code class="bg-zinc-200 dark:bg-zinc-700 px-[5px] py-[1px] rounded">cabinet-sms-rappels</code> apparaît.</small>
           </div>
         </li>
-        <li class="help-step">
-          <div class="help-step-num">3</div>
-          <div class="help-step-content">
+        <li class="flex gap-[10px] items-start">
+          <div class="w-5 h-5 min-w-5 rounded-full bg-primary text-white text-[11px] font-semibold flex items-center justify-center mt-[1px] shrink-0">3</div>
+          <div class="flex-1 text-[13px] leading-[1.5] text-zinc-700 dark:text-zinc-200">
             Par séance, cocher <strong>"Désactiver le rappel SMS J-1"</strong> pour exclure un rendez-vous spécifique.
           </div>
         </li>

@@ -1,28 +1,41 @@
 <div class="main bg-white dark:bg-zinc-900 flex flex-col max-md:hidden" id="mainArea" x-data="cabinetMain">
 
-  <div class="status-bar" x-data="{...cabinetStatusBar(), ...cabinetDriveBar()}">
-    <div class="status-bar-left">
-      <span class="status-queue" :class="$store.cab.queueCount > 0 ? 'status-queue--active' : ''">
-        <span class="status-queue-dot" :class="$store.cab.queueCount > 0 ? 'active' : ''"></span>
+  <div class="flex items-center justify-between px-3.5 h-[34px] border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 shrink-0 gap-[10px] text-[11px] text-zinc-500 dark:text-zinc-400"
+       x-data="{...cabinetStatusBar(), ...cabinetDriveBar()}">
+    <div class="flex items-center gap-2">
+      <span class="flex items-center gap-[5px] transition-colors"
+            :class="$store.cab.queueCount > 0 ? 'text-primary font-semibold' : ''">
+        <span class="w-1.5 h-1.5 rounded-full shrink-0 transition-[background-color]"
+              :class="$store.cab.queueCount > 0 ? 'bg-primary animate-pulse' : 'bg-zinc-300 dark:bg-zinc-600'"></span>
         <span x-text="$store.cab.queueCount > 0 ? $store.cab.queueCount + ' SMS en attente' : 'File SMS vide'"></span>
       </span>
-      <div class="status-sep"></div>
-      <span class="status-drive" :class="statusState" @click="toggleDrive()" :title="statusLabel" style="cursor:pointer">
-        <span class="drive-dot" :class="statusState"></span>
+      <div class="w-px h-3.5 bg-zinc-200 dark:bg-zinc-700 shrink-0"></div>
+      <span class="flex items-center gap-[5px] cursor-pointer"
+            @click="toggleDrive()" :title="statusLabel">
+        <span class="w-[7px] h-[7px] rounded-full shrink-0"
+              :class="{
+                'bg-[#3B6D11]': statusState==='ok',
+                'bg-[#BA7517] animate-pulse': statusState==='loading',
+                'bg-primary': statusState==='error',
+                'bg-zinc-300 dark:bg-zinc-600': statusState!=='ok' && statusState!=='loading' && statusState!=='error'
+              }"></span>
         <span x-text="connected ? 'Drive' : 'Drive off'"></span>
       </span>
-      <button class="status-icon-btn" x-show="connected" @click="openVerif()" title="Vérifier Drive">✓</button>
+      <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-[5px] px-1.5 py-[2px] text-[12px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-[1.5] font-[inherit] hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)] transition-colors"
+              x-show="connected" @click="openVerif()" title="Vérifier Drive">✓</button>
     </div>
-    <div class="status-bar-right">
+    <div class="flex items-center gap-2">
       <span x-text="Object.keys($store.cab.clients).length + ' clients'"></span>
-      <div class="status-sep"></div>
-      <a class="status-link" :href="gcalUrl" target="_blank" rel="noopener" title="Google Calendar">📅 Agenda</a>
+      <div class="w-px h-3.5 bg-zinc-200 dark:bg-zinc-700 shrink-0"></div>
+      <a class="inline-flex items-center gap-[3px] text-zinc-500 dark:text-zinc-400 no-underline px-[7px] py-[2px] rounded-[5px] border border-zinc-200 dark:border-zinc-700 leading-[1.5] whitespace-nowrap hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)] transition-colors"
+         :href="gcalUrl" target="_blank" rel="noopener" title="Google Calendar">📅 Agenda</a>
       <template x-if="$store.cab.communicationSettings.googleReviewUrl">
-        <a class="status-link"
+        <a class="inline-flex items-center gap-[3px] text-zinc-500 dark:text-zinc-400 no-underline px-[7px] py-[2px] rounded-[5px] border border-zinc-200 dark:border-zinc-700 leading-[1.5] whitespace-nowrap hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)] transition-colors"
            :href="$store.cab.communicationSettings.googleReviewUrl"
            target="_blank" rel="noopener" title="Avis Google">⭐ Avis</a>
       </template>
-      <button class="status-icon-btn" @click="$store.cab.openModal('settings')" title="Paramètres">⚙</button>
+      <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-[5px] px-1.5 py-[2px] text-[12px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-[1.5] font-[inherit] hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)] transition-colors"
+              @click="$store.cab.openModal('settings')" title="Paramètres">⚙</button>
     </div>
   </div>
 

@@ -1,40 +1,63 @@
 <div id="sidebar_agenda_body" x-show="view==='agenda'"
-     x-data="cabinetAgenda">
+     x-data="cabinetAgenda"
+     class="flex flex-col flex-1 min-h-0">
 
-  <div class="cal-header">
-    <button class="cal-nav" @click="changeMonth(-1)">&#8249;</button>
-    <span class="cal-month" x-text="monthLabel"></span>
-    <button class="cal-nav" @click="changeMonth(1)">&#8250;</button>
+  <div class="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-700">
+    <button class="bg-transparent border-none cursor-pointer text-zinc-500 dark:text-zinc-400 text-[16px] px-[6px] py-[2px] rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            @click="changeMonth(-1)">&#8249;</button>
+    <span class="text-[13px] font-medium" x-text="monthLabel"></span>
+    <button class="bg-transparent border-none cursor-pointer text-zinc-500 dark:text-zinc-400 text-[16px] px-[6px] py-[2px] rounded hover:bg-zinc-200 dark:hover:bg-zinc-700 hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors"
+            @click="changeMonth(1)">&#8250;</button>
   </div>
 
-  <div class="cal-grid">
-    <div class="cal-dow">L</div><div class="cal-dow">M</div><div class="cal-dow">M</div>
-    <div class="cal-dow">J</div><div class="cal-dow">V</div><div class="cal-dow">S</div><div class="cal-dow">D</div>
+  <div class="grid grid-cols-7 gap-px px-3 py-2">
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">L</div>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">M</div>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">M</div>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">J</div>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">V</div>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">S</div>
+    <div class="text-[10px] text-zinc-400 dark:text-zinc-500 text-center py-[3px] font-medium">D</div>
     <template x-for="(cell, i) in calRows" :key="i">
-      <div class="cal-day"
-           :class="{other: cell.empty, today: cell.isToday, 'has-session': cell.hasSession}"
+      <div class="text-[11px] text-center px-[2px] py-[5px] rounded-md min-h-[26px] flex items-center justify-center flex-col gap-[1px] transition-colors"
+           :class="{
+             'text-zinc-400 dark:text-zinc-500': cell.empty,
+             'bg-[color-mix(in_srgb,var(--color-primary)_12%,transparent)] text-primary font-bold': cell.isToday,
+             'bg-zinc-100 dark:bg-zinc-800 font-semibold': cell.hasSession && !cell.isToday,
+             'cursor-pointer hover:bg-[color-mix(in_srgb,var(--color-primary)_15%,transparent)]': cell.hasSession
+           }"
            @click="cell.hasSession && scrollToDate(cell.dateStr)">
         <span x-text="cell.d || ''"></span>
-        <div class="cal-pip" x-show="cell.hasSession"></div>
+        <div class="w-1 h-1 rounded-full bg-primary" x-show="cell.hasSession"></div>
       </div>
     </template>
   </div>
 
-  <div class="agenda-section-header">Séances du mois</div>
+  <div class="border-t border-zinc-200 dark:border-zinc-700 px-4 pt-[10px] pb-1 text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-[.5px]">
+    Séances du mois
+  </div>
 
-  <div class="agenda-list">
-    <div x-show="monthGroups.length === 0" class="agenda-empty">Aucune séance ce mois-ci</div>
+  <div class="px-4 py-3 overflow-y-auto flex-1">
+    <div x-show="monthGroups.length === 0"
+         class="text-center py-6 text-[12px] text-zinc-400 dark:text-zinc-500">
+      Aucune séance ce mois-ci
+    </div>
     <template x-for="group in monthGroups" :key="group.dateStr">
-      <div class="agenda-group" :id="'date_' + group.dateStr">
-        <div class="agenda-date-header" x-text="group.label"></div>
+      <div class="mb-3.5" :id="'date_' + group.dateStr">
+        <div class="text-[11px] font-semibold text-primary uppercase tracking-[.5px] mb-1.5 flex items-center gap-2 after:content-[''] after:flex-1 after:h-px after:bg-[color-mix(in_srgb,var(--color-primary)_25%,transparent)]"
+             x-text="group.label"></div>
         <template x-for="entry in group.entries" :key="entry.id">
-          <div class="agenda-entry" :class="{past: group.isPast}" @click="goToClient(entry.cid)">
-            <div class="agenda-time" x-text="(entry.heure || '').slice(0,5)"></div>
-            <div>
-              <div class="agenda-client" x-text="entry.clientName"></div>
-              <div class="agenda-motif" x-show="entry.motif" x-text="entry.motif"></div>
+          <div class="flex items-start gap-[10px] px-[10px] py-[7px] rounded-lg cursor-pointer mb-1 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+               :class="{'opacity-60': group.isPast}"
+               @click="goToClient(entry.cid)">
+            <div class="text-[11px] text-zinc-400 dark:text-zinc-500 min-w-8 mt-[1px]"
+                 x-text="(entry.heure || '').slice(0,5)"></div>
+            <div class="flex-1 min-w-0">
+              <div class="text-[13px] font-medium" x-text="entry.clientName"></div>
+              <div class="text-[11px] text-zinc-500 dark:text-zinc-400" x-show="entry.motif" x-text="entry.motif"></div>
             </div>
-            <div class="agenda-dur" x-show="entry.duree" x-text="entry.duree + ' min'"></div>
+            <div class="text-[10px] px-[6px] py-[1px] rounded-full bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400 whitespace-nowrap shrink-0 self-center"
+                 x-show="entry.duree" x-text="entry.duree + ' min'"></div>
           </div>
         </template>
       </div>
