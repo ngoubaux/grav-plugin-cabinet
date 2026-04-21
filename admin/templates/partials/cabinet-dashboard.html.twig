@@ -1,0 +1,195 @@
+{% set m = cabinet_metrics ?? {} %}
+{% set total_clients   = m.total_clients   ?? 0 %}
+{% set active_clients  = m.active_clients  ?? 0 %}
+{% set dormant_clients = m.dormant_clients ?? 0 %}
+{% set upcoming        = m.upcoming        ?? 0 %}
+{% set today_count     = m.today           ?? 0 %}
+{% set this_week       = m.this_week       ?? 0 %}
+{% set this_month      = m.this_month      ?? 0 %}
+{% set completed       = m.completed       ?? 0 %}
+{% set cancelled       = m.cancelled       ?? 0 %}
+{% set activity        = m.activity        ?? [] %}
+
+<div class="admin-block cab-admin-dashboard">
+
+  {% if total_clients == 0 and m is empty %}
+    <div class="alert notice">Aucune donnée disponible — assurez-vous que le plugin Cabinet est correctement configuré.</div>
+  {% else %}
+
+  {# ── Rangée 1 : métriques principales ── #}
+  <div class="cab-dashboard-cards">
+
+    <div class="cab-card cab-m--clients">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-users"></i></span>
+          <span class="cab-metric__label">Clients</span>
+        </div>
+        <div class="cab-metric__value">{{ total_clients }}</div>
+        <div class="cab-metric__sub">Total enregistrés</div>
+      </div>
+    </div>
+
+    <div class="cab-card cab-m--upcoming">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-calendar-check-o"></i></span>
+          <span class="cab-metric__label">RDV à venir</span>
+        </div>
+        <div class="cab-metric__value">{{ upcoming }}</div>
+        <div class="cab-metric__sub">
+          {%- if today_count > 0 -%}
+            dont {{ today_count }} aujourd'hui
+          {%- else -%}
+            aucun aujourd'hui
+          {%- endif -%}
+        </div>
+      </div>
+    </div>
+
+    <div class="cab-card cab-m--completed">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-check-circle"></i></span>
+          <span class="cab-metric__label">Séances réalisées</span>
+        </div>
+        <div class="cab-metric__value">{{ completed }}</div>
+        <div class="cab-metric__sub">Total cumulé</div>
+      </div>
+    </div>
+
+    <div class="cab-card cab-m--cancelled">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-times-circle"></i></span>
+          <span class="cab-metric__label">Annulations</span>
+        </div>
+        <div class="cab-metric__value">{{ cancelled }}</div>
+        <div class="cab-metric__sub">Total cumulé</div>
+      </div>
+    </div>
+
+  </div>{# /.cab-dashboard-cards row 1 #}
+
+  {# ── Rangée 2 : statuts clients + semaine / mois ── #}
+  <div class="cab-dashboard-cards">
+
+    <div class="cab-card cab-m--active">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-user-circle"></i></span>
+          <span class="cab-metric__label">Clients actifs</span>
+        </div>
+        <div class="cab-metric__value">{{ active_clients }}</div>
+        <div class="cab-metric__sub">Avec un RDV planifié</div>
+      </div>
+    </div>
+
+    <div class="cab-card cab-m--dormant">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-user-o"></i></span>
+          <span class="cab-metric__label">Clients dormants</span>
+        </div>
+        <div class="cab-metric__value">{{ dormant_clients }}</div>
+        <div class="cab-metric__sub">Sans RDV à venir</div>
+      </div>
+    </div>
+
+    <div class="cab-card cab-m--week">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-calendar"></i></span>
+          <span class="cab-metric__label">Cette semaine</span>
+        </div>
+        <div class="cab-metric__value">{{ this_week }}</div>
+        <div class="cab-metric__sub">RDV lun → dim</div>
+      </div>
+    </div>
+
+    <div class="cab-card cab-m--month">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-calendar-o"></i></span>
+          <span class="cab-metric__label">Ce mois</span>
+        </div>
+        <div class="cab-metric__value">{{ this_month }}</div>
+        <div class="cab-metric__sub">RDV du mois en cours</div>
+      </div>
+    </div>
+
+  </div>{# /.cab-dashboard-cards row 2 #}
+
+  {# ── Rangée 3 : graphique en barres — activité mensuelle ── #}
+  <div class="cab-dashboard-cards">
+    <div class="cab-card cab-m--chart">
+      <div class="cab-metric__inner">
+        <div class="cab-metric__header">
+          <span class="cab-metric__icon"><i class="fa fa-bar-chart"></i></span>
+          <span class="cab-metric__label">Activité — 6 derniers mois</span>
+        </div>
+        <div class="cab-metric__chart">
+          {% if activity|length > 0 %}
+            {# Calcul du max pour l'échelle #}
+            {% set max_val = 1 %}
+            {% for item in activity %}
+              {% if item.count > max_val %}{% set max_val = item.count %}{% endif %}
+            {% endfor %}
+
+            {% set ch   = 72 %}
+            {% set bw   = 36 %}
+            {% set bg   = 14 %}
+            {% set n    = activity|length %}
+            {% set tw   = n * (bw + bg) - bg %}
+            {% set lh   = 18 %}
+
+            <svg viewBox="0 0 {{ tw }} {{ ch + lh + 4 }}" width="100%" preserveAspectRatio="none" class="cab-bar-chart">
+              {% for i, item in activity %}
+                {% set bar_h  = max_val > 0 ? ((item.count / max_val) * ch)|round(0) : 0 %}
+                {% set bar_h  = bar_h < 2 and item.count > 0 ? 2 : bar_h %}
+                {% set x      = i * (bw + bg) %}
+                {% set y      = ch - bar_h %}
+                {# Barre #}
+                <rect x="{{ x }}" y="{{ y }}" width="{{ bw }}" height="{{ bar_h > 0 ? bar_h : 1 }}"
+                      fill="{{ bar_h > 0 ? '#3B8AD9' : '#e2e8f0' }}" rx="4" opacity="{{ bar_h > 0 ? '1' : '0.5' }}"/>
+                {# Valeur au-dessus #}
+                {% if item.count > 0 %}
+                  <text x="{{ x + bw / 2 }}" y="{{ y - 4 }}"
+                        text-anchor="middle" font-size="10" fill="#3B8AD9" font-weight="600">{{ item.count }}</text>
+                {% endif %}
+                {# Label du mois #}
+                <text x="{{ x + bw / 2 }}" y="{{ ch + lh }}"
+                      text-anchor="middle" font-size="10" fill="#94a3b8">{{ item.label }}</text>
+              {% endfor %}
+            </svg>
+          {% else %}
+            <div class="cab-metric__empty">Aucune donnée disponible</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>{# /.cab-dashboard-cards row 3 #}
+
+  {# ── Taux de conversion rapide ── #}
+  {% set total_rdv = m.total_rdv ?? 0 %}
+  {% if total_rdv > 0 %}
+  <div class="cab-stats-footer">
+    <span>
+      <strong>{{ total_rdv }}</strong> RDV au total
+    </span>
+    <span class="cab-stats-sep">·</span>
+    <span>
+      Taux de réalisation&nbsp;:
+      <strong>{{ total_rdv > 0 ? ((completed / total_rdv) * 100)|round(0) : 0 }} %</strong>
+    </span>
+    <span class="cab-stats-sep">·</span>
+    <span>
+      Taux d'annulation&nbsp;:
+      <strong>{{ total_rdv > 0 ? ((cancelled / total_rdv) * 100)|round(0) : 0 }} %</strong>
+    </span>
+  </div>
+  {% endif %}
+
+  {% endif %}
+
+</div>

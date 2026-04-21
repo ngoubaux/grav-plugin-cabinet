@@ -22,11 +22,15 @@ require_once __DIR__ . '/classes/Seances.php';
 require_once __DIR__ . '/classes/Facturation.php';
 require_once __DIR__ . '/classes/Import.php';
 require_once __DIR__ . '/classes/Sms.php';
+require_once __DIR__ . '/classes/Metrics.php';
 require_once __DIR__ . '/classes/Flex/RendezVousObject.php';
 require_once __DIR__ . '/classes/Flex/ClientObject.php';
 
 class CabinetPlugin extends Plugin
 {
+    /** @var string */
+    private $admin_route = 'cabinet';
+
     /** @var Core|null */
     private $core;
 
@@ -55,6 +59,7 @@ class CabinetPlugin extends Plugin
     {
         return [
             'onTwigTemplateAdminPaths'  => ['onTwigTemplatePaths', 0],
+            'onAdminTwigTemplatePaths'  => ['onAdminTwigTemplatePaths', 0],
             'onPluginsInitialized'      => ['onPluginsInitialized', 0],
             'onTwigTemplatePaths'       => ['onTwigTemplatePaths', 0],
             'onGetPageBlueprints'       => ['onGetPageBlueprints', 0],
@@ -101,6 +106,13 @@ class CabinetPlugin extends Plugin
         }
     }
 
+    public function onAdminTwigTemplatePaths(Event $event): void
+    {
+        $paths = $event['paths'];
+        array_unshift($paths, __DIR__ . '/admin/templates');
+        $event['paths'] = $paths;
+    }
+
     public function onTwigTemplatePaths(Event $event): void
     {
         if ($this->core === null) {
@@ -117,14 +129,21 @@ class CabinetPlugin extends Plugin
         }
 
         $this->grav['twig']->plugins_hooked_nav['Cabinet'] = [
-            'route' => '/plugins/cabinet',
-            'icon' => 'fa-briefcase',
+            'route'    => $this->admin_route,
+            'location' => $this->admin_route,
+            'icon'     => 'fa-briefcase',
         ];
     }
 
     public function onPageInitializedAdmin(): void
     {
-        // Backward-compatible no-op for stale cached event listeners.
+        $this->grav['assets']->addCss('plugin://cabinet/assets/admin/cabinet-admin.css');
+
+        if ($this->core === null) {
+            $this->core = new Core();
+        }
+        $metrics = new \Grav\Plugin\Cabinet\Metrics($this->core);
+        $this->grav['twig']->twig_vars['cabinet_metrics'] = $metrics->compute();
     }
 
     public function onPluginsInitialized(): void
@@ -132,6 +151,12 @@ class CabinetPlugin extends Plugin
         $this->bootModules();
 
         if ($this->isAdmin()) {
+            $admin = $this->grav['admin'] ?? null;
+            if ($admin && ($admin->location === $this->admin_route || $admin->route === $this->admin_route)) {
+                $this->enable([
+                    'onPageInitialized' => ['onPageInitializedAdmin', 0],
+                ]);
+            }
             return;
         }
 

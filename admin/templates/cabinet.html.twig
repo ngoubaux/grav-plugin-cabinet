@@ -1,0 +1,13 @@
+{% extends 'partials/base.html.twig' %}
+
+{% block titlebar %}
+<div class="button-bar">
+  <a class="button" href="{{ base_url }}"><i class="fa fa-reply"></i> Retour</a>
+  <a class="button" href="{{ admin.adminRoute('/plugins/cabinet') }}"><i class="fa fa-cog"></i> Paramètres</a>
+</div>
+<h1><i class="fa fa-briefcase"></i> Cabinet &mdash; Tableau de bord</h1>
+{% endblock %}
+
+{% block content %}
+  {% include 'partials/cabinet-dashboard.html.twig' %}
+{% endblock %}
