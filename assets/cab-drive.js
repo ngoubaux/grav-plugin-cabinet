@@ -229,17 +229,21 @@ async function _driveFolderChild(parentId, name) {
   return (d.files&&d.files.length) ? d.files[0].id : null;
 }
 
-async function _getBilanFolderId() {
-  if(_bilanFolderIdCache) return _bilanFolderIdCache;
-  const path = Alpine.store('cab').driveBilanPath;
+async function _getDriveFolderByPath(path) {
   let id='root';
   for(const part of path.split('/').map(p=>p.trim()).filter(Boolean)){
     id=await _driveFolderChild(id, part);
     if(!id) return null;
   }
-  _bilanFolderIdCache=id;
   return id;
 }
+
+async function _getBilanFolderId() {
+  if(_bilanFolderIdCache) return _bilanFolderIdCache;
+  _bilanFolderIdCache = await _getDriveFolderByPath(Alpine.store('cab').driveBilanPath);
+  return _bilanFolderIdCache;
+}
+
 
 async function findClientBilanFile(clientId) {
   if(_bilanFileCache[clientId]!==undefined) return _bilanFileCache[clientId];
@@ -272,7 +276,7 @@ async function uploadBilanTemplate(clientId) {
   if(!folderId){ showToast('Dossier Drive introuvable','error'); return; }
   let pdfBlob;
   try{
-    const r=await fetch('/cabinet/bilan-template.pdf');
+    const r=await fetch((window.CABINET_ROUTE_APP||'/cabinet')+'/client-template.pdf');
     if(!r.ok) throw new Error('HTTP '+r.status);
     pdfBlob=await r.blob();
   }catch(e){ showToast('Erreur chargement template : '+e.message,'error'); return; }
@@ -394,6 +398,63 @@ async function handleBilanDoc(clientId) {
   }
 }
 
+async function appendSeanceTemplate(clientId) {
+  if(!_driveToken){ showToast("Connectez Google Drive d'abord",'error'); return; }
+  const bilanFile=await findClientBilanFile(clientId);
+  if(!bilanFile){ showToast('Bilan introuvable sur Drive','error'); return; }
+
+  if(!window.PDFLib){
+    await new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js';
+      s.onload=resolve; s.onerror=()=>reject(new Error('Chargement pdf-lib échoué'));
+      document.head.appendChild(s);
+    });
+  }
+  const {PDFDocument}=window.PDFLib;
+
+  showToast('Téléchargement du bilan…');
+  let bilanBytes;
+  try{
+    const r=await fetch(`https://www.googleapis.com/drive/v3/files/${bilanFile.fileId}?alt=media`,
+      {headers:{'Authorization':'Bearer '+_driveToken}});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    bilanBytes=await r.arrayBuffer();
+  }catch(e){ showToast('Erreur téléchargement bilan : '+e.message,'error'); return; }
+
+  let templateBytes;
+  try{
+    const r=await fetch((window.CABINET_ROUTE_APP||'/cabinet')+'/seance-template.pdf');
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    templateBytes=await r.arrayBuffer();
+  }catch(e){ showToast('Erreur chargement template : '+e.message,'error'); return; }
+
+  let mergedBytes;
+  try{
+    const bilanDoc=await PDFDocument.load(bilanBytes,{ignoreEncryption:true});
+    const templateDoc=await PDFDocument.load(templateBytes,{ignoreEncryption:true});
+    const pages=await bilanDoc.copyPages(templateDoc,templateDoc.getPageIndices());
+    pages.forEach(p=>bilanDoc.addPage(p));
+    mergedBytes=await bilanDoc.save();
+  }catch(e){ showToast('Erreur fusion PDF : '+e.message,'error'); return; }
+
+  try{
+    const blob=new Blob([mergedBytes],{type:'application/pdf'});
+    const form=new FormData();
+    form.append('metadata',new Blob([JSON.stringify({})],{type:'application/json'}));
+    form.append('file',blob,bilanFile.name);
+    const r=await fetch(
+      `https://www.googleapis.com/upload/drive/v3/files/${bilanFile.fileId}?uploadType=multipart`,
+      {method:'PATCH',headers:{'Authorization':'Bearer '+_driveToken},body:form});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+  }catch(e){ showToast('Erreur upload Drive : '+e.message,'error'); return; }
+
+  delete _bilanFileCache[clientId];
+  showToast('Fiche séance ajoutée au bilan');
+  const store=Alpine.store('cab');
+  if(store.activeTab==='bilan') store.loadBilanFile();
+}
+
 async function runGlobalVerification() {
   const store=Alpine.store('cab');
   if(!_driveToken){ showToast('Connectez Google Drive d\'abord','error'); return; }
@@ -410,7 +471,7 @@ async function runGlobalVerification() {
     log(`⚠ Dossier Drive introuvable (${store.driveBilanPath})`,'warn');
   } else {
     let templateBlob=null;
-    try{ const r=await fetch('/cabinet/bilan-template.pdf'); if(r.ok) templateBlob=await r.blob(); }catch(_){}
+    try{ const r=await fetch((window.CABINET_ROUTE_APP||'/cabinet')+'/client-template.pdf'); if(r.ok) templateBlob=await r.blob(); }catch(_){}
     for(const clientId of clientIds){
       const c=store.clients[clientId];
       const name=((c.first_name||'')+' '+(c.last_name||'')).trim();
@@ -475,7 +536,7 @@ async function runGlobalVerification() {
 
   const hasErr=stats.bilanErr||stats.calErr;
   store.modal.verifSummary={
-    text:`Bilans : ${stats.bilanOk} OK · ${stats.bilanSent} envoyés · ${stats.bilanErr} erreur(s)`
+    text:`Fiches clients : ${stats.bilanOk} OK · ${stats.bilanSent} envoyées · ${stats.bilanErr} erreur(s)`
       +(calId?` · Agenda : ${stats.calCreated} créé(s) · ${stats.calErr} erreur(s)`:''),
     ok: !hasErr
   };

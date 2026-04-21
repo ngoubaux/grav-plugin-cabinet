@@ -22,6 +22,11 @@ dependencies:
 form:
   validation: strict
   fields:
+    changelog_btn:
+      type: display
+      label: Changelog
+      content: '<a class="button button-small" href="#" data-remodal-target="changelog" data-remodal-changelog="/api/cabinet/changelog"><i class="fa fa-binoculars"></i> View Changelog</a>'
+
     enabled:
       type: toggle
       label: Statut du plugin
@@ -151,12 +156,33 @@ form:
       help: "Paramètres du calendrier → Adresse de l'agenda. Laisser vide pour désactiver."
       placeholder: xxxx@group.calendar.google.com
 
+    template_client_pdf:
+      type: file
+      label: Template PDF — fiche client
+      help: "PDF vierge envoyé sur Drive lors de la création d'un client (nommé Prénom Nom.pdf). Si vide, le template intégré est utilisé."
+      destination: 'user-data://cabinet/templates'
+      multiple: false
+      limit: 1
+      accept:
+        - application/pdf
+
+    template_seance_pdf:
+      type: file
+      label: Template PDF — fiche séance
+      help: "PDF vierge ajouté sur Drive pour chaque nouvelle séance (nommé Prénom Nom - Séance N.pdf). Si vide, le template fiche client est utilisé."
+      destination: 'user-data://cabinet/templates'
+      multiple: false
+      limit: 1
+      accept:
+        - application/pdf
+
     drive_bilan_path:
       type: text
-      label: Chemin des bilans sur Google Drive
-      help: "Chemin du dossier contenant les sous-dossiers clients sur Drive. Séparateur : /. Sans slash au début ni à la fin."
+      label: Chemin des fiches clients sur Google Drive
+      help: "Dossier Drive où est déposée la fiche vierge de chaque client (une par client, nommée Prénom Nom.pdf). Séparateur : /. Sans slash au début ni à la fin."
       placeholder: onyx/NoteAir5c/Cahiers/clients
       default: 'onyx/NoteAir5c/Cahiers/clients'
+
 
     sms:
       type: section

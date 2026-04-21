@@ -101,6 +101,11 @@ google_oauth_client_id: ''      # ex: xxxx.apps.googleusercontent.com
 google_calendar_id: ''          # ex: xxxx@group.calendar.google.com
 drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'
 
+# Templates PDF (optionnels — uploadés depuis l'admin)
+# Si vides, le PDF intégré "Fiche Client - Shiatsu.pdf" est utilisé
+template_client_pdf: ~          # fiche vierge envoyée à la création d'un client
+template_seance_pdf: ~          # fiche ajoutée à chaque nouvelle séance (fallback → template_client_pdf)
+
 # SMS — Multi-provider
 sms_enabled: false
 sms_provider: 'smsmobileapi'
@@ -127,7 +132,9 @@ communication_template_compte_rendu: ''
 | `allowed_origin` | En-tête CORS `Access-Control-Allow-Origin`. |
 | `google_oauth_client_id` | Client ID OAuth 2.0 Google Cloud Console. |
 | `google_calendar_id` | Identifiant du calendrier Google à synchroniser. |
-| `drive_bilan_path` | Chemin Drive des bilans PDF. Séparateur `/`, sans slash en début/fin. |
+| `drive_bilan_path` | Chemin Drive des fiches clients PDF. Séparateur `/`, sans slash en début/fin. |
+| `template_client_pdf` | Fichier PDF uploadé via l'admin (`user/data/cabinet/templates/`). Utilisé comme fiche vierge lors de la création d'un client. Si absent, le PDF intégré est utilisé. |
+| `template_seance_pdf` | Fichier PDF uploadé via l'admin. Utilisé comme fiche de suivi par séance (bouton **+ Fiche séance** dans l'onglet Bilan). Fallback : `template_client_pdf`, puis PDF intégré. |
 | `sms_enabled` | Active l'envoi automatique des rappels J-1 via le scheduler Grav. |
 | `sms_provider` | Fournisseur SMS utilisé : `smsmobileapi`, `simple_sms_gateway` ou `android_queue`. |
 | `sms_simple_gateway_url` | Endpoint HTTP de la passerelle Android (payload JSON `phone` + `message`). |
@@ -208,7 +215,8 @@ Formulaire :
 ### Bilan (onglet Bilan)
 
 - Affiche le PDF du bilan Boox stocké sur Google Drive.
-- Si absent, bouton **Envoyer la fiche vierge sur Drive**.
+- Si absent, bouton **Envoyer la fiche vierge sur Drive** (upload du `template_client_pdf` configuré, ou du PDF intégré).
+- Bouton **+ Fiche séance** : fusionne le `template_seance_pdf` à la fin du bilan existant et re-uploade le fichier sur Drive. Utilise `pdf-lib` chargé à la demande — aucune dépendance serveur.
 
 ### Communication (onglet Communication)
 
@@ -842,7 +850,9 @@ Les routes listées ci-dessous utilisent les valeurs par défaut :
 | `POST` | `{route_api_base}/import/clients` | Importer des clients depuis un CSV (multipart `file` + `dry_run`) |
 | `POST` | `{route_api_base}/import/rendezvous` | Importer des rendez-vous depuis un ICS (multipart `file` + `dry_run`) |
 | `GET` | `/api/contacts/search` | Rechercher un client par nom/email |
-| `GET` | `{route_app_base}/bilan-template.pdf` | Télécharger le template PDF |
+| `GET` | `{route_app_base}/client-template.pdf` | Template PDF fiche client (`template_client_pdf` configuré, ou PDF intégré) |
+| `GET` | `{route_app_base}/seance-template.pdf` | Template PDF fiche séance (fallback : `template_client_pdf` → PDF intégré) |
+| `GET` | `{route_app_base}/bilan-template.pdf` | Alias rétrocompatible → `client-template.pdf` |
 
 ---
 
@@ -872,7 +882,7 @@ user/plugins/cabinet/
 │   ├── manifest.json                 # PWA manifest
 │   ├── sw.js                         # Service Worker (PWA)
 │   ├── cab-drive.js                  # Google Drive + Calendar (Alpine component)
-│   ├── Fiche Client - Shiatsu.pdf    # Template PDF bilan vierge
+│   ├── Fiche Client - Shiatsu.pdf    # Template PDF intégré (fallback si aucun template uploadé)
 │   ├── resalib-sync.gs               # Google Apps Script (Resalib → Cabinet)
 │   ├── components/
 │   │   ├── sidebar.js                # Alpine component — sidebar clients/agenda

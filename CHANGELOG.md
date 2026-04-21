@@ -1,5 +1,18 @@
 <!-- markdownlint-disable MD022 MD051 -->
 
+# 2.0.2
+
+## 04/21/2026
+
+1. [](#new)
+   * Templates PDF configurables depuis l'administration : `template_client_pdf` (fiche vierge client) et `template_seance_pdf` (fiche séance, avec fallback sur le template client puis sur le PDF intégré).
+   * Nouveaux endpoints `{route_app_base}/client-template.pdf` et `{route_app_base}/seance-template.pdf` avec chaîne de fallback. Rétrocompatibilité de `/bilan-template.pdf` maintenue.
+   * Bouton **+ Fiche séance** dans l'onglet Bilan : fusionne le template séance à la fin du bilan Drive existant via `pdf-lib` (chargé à la demande depuis CDN), puis re-uploade le fichier sur Drive.
+
+2. [](#improved)
+   * Onglet Bilan : suppression de la section « Évolution énergétique » (redondante avec l'onglet Séances).
+   * Barre de statut : rendue scrollable horizontalement (`overflow-x-auto`, scrollbar masquée) pour les fenêtres étroites ; tous les éléments sont `shrink-0` pour éviter le tronquage.
+
 # 2.0.1
 
 ## 04/20/2026

@@ -76,19 +76,20 @@ class Api
             $this->serveAsset('manifest.json', 'application/manifest+json');
         }
 
+        if ($path === $appBase . '/client-template.pdf') {
+            $this->core->requireGravSession();
+            $this->serveTemplate('template_client_pdf', 'FicheTemplate_client.pdf');
+        }
+
+        if ($path === $appBase . '/seance-template.pdf') {
+            $this->core->requireGravSession();
+            $this->serveTemplate('template_seance_pdf', 'FicheTemplate_rendezvous.pdf', 'template_client_pdf');
+        }
+
+        // Backward compatibility
         if ($path === $appBase . '/bilan-template.pdf') {
             $this->core->requireGravSession();
-            $file = dirname(__DIR__) . '/assets/Fiche Client - Shiatsu.pdf';
-            if (!file_exists($file)) {
-                http_response_code(404);
-                echo 'Not found';
-                exit;
-            }
-            header('Content-Type: application/pdf');
-            header('Content-Disposition: inline; filename="Fiche-Client-Shiatsu.pdf"');
-            header('Content-Length: ' . filesize($file));
-            readfile($file);
-            exit;
+            $this->serveTemplate('template_client_pdf', 'FicheTemplate_client.pdf');
         }
 
         if ($path === $apiBase . '/data') {
@@ -195,6 +196,11 @@ class Api
             $this->serveTermuxScript('termux-sms-queue.py.twig', 'termux-sms-queue.py');
         }
 
+        if ($path === $apiBase . '/changelog' && $method === 'GET') {
+            $this->core->requireGravSession();
+            $this->serveChangelog();
+        }
+
         $this->core->jsonExit(['error' => 'Route not found'], 404);
     }
 
@@ -233,6 +239,99 @@ class Api
         header('Content-Type: text/x-shellscript; charset=utf-8');
         header('Content-Disposition: attachment; filename="' . $filename . '"');
         echo $script;
+        exit;
+    }
+
+    private function serveChangelog(): void
+    {
+        $file = dirname(__DIR__) . '/CHANGELOG.md';
+        if (!file_exists($file)) {
+            http_response_code(404);
+            echo '<p>CHANGELOG introuvable.</p>';
+            exit;
+        }
+
+        $raw = file_get_contents($file);
+
+        // Parse versions: split on lines starting with "# "
+        $entries = [];
+        $blocks  = preg_split('/^(?=# )/m', $raw);
+        foreach ($blocks as $block) {
+            $block = trim($block);
+            if (!preg_match('/^# (.+)/', $block, $vm)) {
+                continue;
+            }
+            $version = trim($vm[1]);
+            $date    = '';
+            if (preg_match('/^## (.+)/m', $block, $dm)) {
+                $date = trim($dm[1]);
+            }
+            // Strip version and date headers, keep the rest as Markdown
+            $content = preg_replace('/^# .+\n?/m', '', $block);
+            $content = preg_replace('/^## .+\n?/m', '', $content);
+            // Remove markdownlint comments
+            $content = preg_replace('/<!--.*?-->/s', '', $content);
+            $entries[$version] = ['date' => $date, 'content' => trim($content)];
+        }
+
+        // Render Markdown with Grav's Parsedown
+        $parsedown = new \Parsedown();
+        $parsedown->setSafeMode(false);
+
+        // Mirror the structure of changelog.html.twig
+        $out  = '<section id="ajax" class="changelog">';
+        $out .= '<a href="#" class="remodal-close"></a>';
+        $out .= '<h1>Cabinet Changelog</h1>';
+        $out .= '<div class="changelog-overflow">';
+        foreach ($entries as $version => $log) {
+            $id   = str_replace([' ', '.'], '-', $version);
+            $out .= '<h3 id="' . htmlspecialchars($id) . '">v' . htmlspecialchars($version) . '</h3>';
+            if ($log['date']) {
+                $out .= '<h4>' . htmlspecialchars($log['date']) . '</h4>';
+            }
+            $out .= $parsedown->text($log['content']);
+        }
+        $out .= '</div></section>';
+
+        header('Content-Type: text/html; charset=utf-8');
+        echo $out;
+        exit;
+    }
+
+    private function serveTemplate(string $configKey, string $downloadName, string $fallbackConfigKey = null): void
+    {
+        $grav    = Grav::instance();
+        $config  = $grav['config'];
+        $locator = $grav['locator'];
+        $default = dirname(__DIR__) . '/assets/Fiche Client - Shiatsu.pdf';
+        $file    = null;
+
+        foreach (array_filter([$configKey, $fallbackConfigKey]) as $key) {
+            $data = $config->get('plugins.cabinet.' . $key, []);
+            if (!empty($data) && is_array($data)) {
+                $entry = array_key_first($data);
+                $resolved = $locator->findResource($entry, true) ?: (GRAV_ROOT . DS . ltrim(str_replace('/', DS, $entry), DS));
+                if ($resolved && file_exists($resolved)) {
+                    $file = $resolved;
+                    break;
+                }
+            }
+        }
+
+        if (!$file) {
+            $file = $default;
+        }
+
+        if (!file_exists($file)) {
+            http_response_code(404);
+            echo 'Template not found';
+            exit;
+        }
+
+        header('Content-Type: application/pdf');
+        header('Content-Disposition: inline; filename="' . $downloadName . '"');
+        header('Content-Length: ' . filesize($file));
+        readfile($file);
         exit;
     }
 

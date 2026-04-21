@@ -49,5 +49,12 @@ function cabinetBilan() {
     async uploadTemplate() {
       await uploadBilanTemplate(Alpine.store('cab').activeId);
     },
+
+    appendingSeance: false,
+    async appendSeanceTemplate() {
+      this.appendingSeance = true;
+      try { await appendSeanceTemplate(Alpine.store('cab').activeId); }
+      finally { this.appendingSeance = false; }
+    },
   };
 }

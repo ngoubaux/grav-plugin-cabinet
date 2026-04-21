@@ -12,10 +12,16 @@
   <div x-show="$store.cab.driveConnected && !$store.cab.bilanLoading && $store.cab.bilanFile" class="mb-1">
     <div class="flex justify-between items-center mb-2.5">
       <span class="section-label" style="margin:0">Bilan tablette</span>
-      <a :href="'https://drive.google.com/file/d/' + $store.cab.bilanFile?.fileId + '/view'"
-         target="_blank" class="btn-ghost btn-sm">
-        Ouvrir dans Drive &#8599;
-      </a>
+      <div class="flex gap-2 items-center">
+        <button class="btn-ghost btn-sm" :disabled="appendingSeance" @click="appendSeanceTemplate()">
+          <span x-show="!appendingSeance">+ Fiche séance</span>
+          <span x-show="appendingSeance">Fusion…</span>
+        </button>
+        <a :href="'https://drive.google.com/file/d/' + $store.cab.bilanFile?.fileId + '/view'"
+           target="_blank" class="btn-ghost btn-sm">
+          Ouvrir dans Drive &#8599;
+        </a>
+      </div>
     </div>
     <div class="rounded-[10px] overflow-hidden border border-zinc-200 dark:border-zinc-700">
       <iframe :src="$store.cab.bilanFile ? 'https://drive.google.com/file/d/' + $store.cab.bilanFile.fileId + '/preview' : ''"
@@ -38,47 +44,5 @@
     </div>
   </div>
 
-  {# ── Évolution énergétique ── #}
-  <div class="flex justify-between items-center mt-5 mb-4">
-    <div class="section-label" style="margin:0">Évolution énergétique</div>
-    <div class="internal-badge" style="margin:0">Usage interne uniquement</div>
-  </div>
-
-  <div x-show="sessionsWithBilan.length === 0" class="text-center py-[30px] text-zinc-500 dark:text-zinc-400 text-[13px]">
-    Aucun bilan enregistré.<br>
-    <span class="text-[12px]">Ajoutez un bilan dans l'onglet Séances → sous-onglet "Bilan".</span>
-  </div>
-
-  <div x-show="sessionsWithBilan.length > 0">
-    <div class="flex flex-wrap gap-1.5 mb-4">
-      <template x-for="entry in legendEntries()" :key="entry.val">
-        <span class="energie-chip" :class="entry.cls" x-text="entry.label"></span>
-      </template>
-    </div>
-
-    {# Timeline #}
-    <div class="relative pl-5 before:content-[''] before:absolute before:left-1.5 before:top-2 before:bottom-2 before:w-px before:bg-zinc-200 dark:before:bg-zinc-700">
-      <template x-for="s in sessionsWithBilan" :key="s.id">
-        <div class="relative mb-4 px-3.5 py-3 border border-zinc-200 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-900 before:content-[''] before:absolute before:left-[-17px] before:top-4 before:w-2 before:h-2 before:rounded-full before:bg-primary before:border-2 before:border-white dark:before:border-zinc-900 before:shadow-[0_0_0_1px_var(--color-primary)]">
-          <div class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-1.5" x-text="s.date + (s.motif ? ' · ' + s.motif : '')"></div>
-          <div class="flex flex-wrap gap-1 mb-1.5" x-show="activeMeridians(s.bilan).length > 0">
-            <template x-for="m in activeMeridians(s.bilan)" :key="m.id">
-              <span class="energie-chip" :class="stateClass(m.state)" :title="m.name">
-                <span x-text="m.id + ' '"></span>
-                <span class="font-medium" x-text="m.name"></span>
-              </span>
-            </template>
-          </div>
-          <div x-show="s.bilan?.element_dominant" class="text-[11px] text-zinc-500 dark:text-zinc-400 mb-1">
-            Élément : <strong x-text="s.bilan?.element_dominant"></strong>
-          </div>
-          <div class="text-[12px] leading-[1.5] text-zinc-700 dark:text-zinc-200" x-show="s.bilan?.synthese_mtc" x-text="s.bilan?.synthese_mtc"></div>
-          <div x-show="s.bilan?.evolution"
-               class="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1.5 italic"
-               x-text="s.bilan?.evolution"></div>
-        </div>
-      </template>
-    </div>
-  </div>
 
 </div>
