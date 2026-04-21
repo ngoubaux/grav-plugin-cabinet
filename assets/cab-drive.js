@@ -189,7 +189,7 @@ function driveAuth() {
   _initTokenClient(cid, false);  // Always reinit for interactive flow with proper callbacks
   Object.assign(Alpine.store('cab').driveStatus, {state:'loading', label:'Connexion…'});
   _driveUpdate(null, 'loading', 'Connexion…');
-  window._tokenClient.requestAccessToken({prompt:'consent'});  // Force consent prompt if needed
+  window._tokenClient.requestAccessToken({prompt:''});
 }
 
 function driveSignOut() {
