@@ -1,0 +1,110 @@
+{% extends 'partials/base.html.twig' %}
+
+{% set cab_ver = '20260422-01' %}
+{% set route_app = app.plugins.cabinet.route_app_base ?? '/cabinet' %}
+
+{% block stylesheets %}
+  {{ parent() }}
+  {% do assets.addCss(route_app ~ '/cabinet.css?v=' ~ cab_ver, {priority: 5}) %}
+  <style>
+    .demo-banner {
+      background: linear-gradient(90deg, #3893F8 0%, #2563eb 100%);
+      color: #fff;
+      font-size: 13px;
+      padding: 9px 18px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      z-index: 50;
+      position: relative;
+    }
+    .demo-banner strong { font-weight: 700; }
+    .demo-banner .demo-pill {
+      background: rgba(255,255,255,0.25);
+      border: 1px solid rgba(255,255,255,0.45);
+      border-radius: 20px;
+      padding: 2px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .demo-banner .demo-sep { opacity: .5; }
+    .demo-banner a {
+      color: #fff;
+      opacity: .85;
+      font-weight: 500;
+      text-decoration: underline;
+      white-space: nowrap;
+    }
+    .demo-banner a:hover { opacity: 1; }
+  </style>
+{% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+  {% do assets.addJs('https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js', {group: 'bottom', priority: 25}) %}
+  {% do assets.addJs('https://apis.google.com/js/api.js', {group: 'head', loading: 'defer'}) %}
+  {% do assets.addJs('https://accounts.google.com/gsi/client', {group: 'head', loading: 'async'}) %}
+  {# utils — chargés en premier, pas de dépendances entre eux #}
+  {% do assets.addJs(route_app ~ '/utils/constants.js?v=' ~ cab_ver,  {group: 'bottom', priority: 22}) %}
+  {% do assets.addJs(route_app ~ '/utils/helpers.js?v=' ~ cab_ver,    {group: 'bottom', priority: 20}) %}
+  {% do assets.addJs(route_app ~ '/utils/toast.js?v=' ~ cab_ver,      {group: 'bottom', priority: 18}) %}
+  {% do assets.addJs(route_app ~ '/utils/api.js?v=' ~ cab_ver,        {group: 'bottom', priority: 17}) %}
+  {% do assets.addJs(route_app ~ '/utils/sms.js?v=' ~ cab_ver,        {group: 'bottom', priority: 16}) %}
+  {# drive — dépend des utils #}
+  {% do assets.addJs(route_app ~ '/cab-drive.js?v=' ~ cab_ver,        {group: 'bottom', priority: 14}) %}
+  {# store — dépend de tout ce qui précède #}
+  {% do assets.addJs(route_app ~ '/store/index.js?v=' ~ cab_ver,      {group: 'bottom', priority: 12}) %}
+  {# ── DEMO : injecte les données fictives AVANT main.js ── #}
+  {% do assets.addJs(route_app ~ '/mockup-demo.js?v=' ~ cab_ver,      {group: 'bottom', priority: 6}) %}
+  {# components #}
+  {% do assets.addJs(route_app ~ '/components/toast.js?v=' ~ cab_ver,     {group: 'bottom', priority: 9}) %}
+  {% do assets.addJs(route_app ~ '/components/sidebar.js?v=' ~ cab_ver,   {group: 'bottom', priority: 8}) %}
+  {% do assets.addJs(route_app ~ '/components/modal.js?v=' ~ cab_ver,     {group: 'bottom', priority: 7}) %}
+  {% do assets.addJs(route_app ~ '/components/accordion.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {% do assets.addJs(route_app ~ '/components/drive-bar.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {% do assets.addJs(route_app ~ '/components/dashboard.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {# main — point d'entrée Alpine, enregistre tout #}
+  {% do assets.addJs(route_app ~ '/main.js?v=' ~ cab_ver,             {group: 'bottom', priority: 5}) %}
+{% endblock %}
+
+{% block body %}
+
+{# ── Bannière démo ── #}
+<div class="demo-banner">
+  <span class="demo-pill">&#9654; Démo</span>
+  <strong>Aperçu du Cabinet Praticien</strong>
+  <span class="demo-sep">—</span>
+  <span>Données fictives · explorez librement l'interface</span>
+  <span class="demo-sep">·</span>
+  <span>Les modifications ne sont pas enregistrées</span>
+  <span style="flex:1"></span>
+  <a href="/login">Accéder au vrai cabinet &#8594;</a>
+</div>
+
+<section class="flex flex-col flex-1 {{ header_fixed ? 'pt-16' : '' }} overflow-hidden">
+  <div class="flex items-stretch flex-1 p-0 overflow-hidden">
+    <div class="grid grid-cols-[260px_1fr] w-full overflow-hidden bg-white dark:bg-zinc-900 h-full min-h-0 max-md:grid-cols-1 max-md:border-x-0 max-md:border-b-0 max-md:min-h-[calc(100dvh-8rem)] max-md:h-auto" id="app" x-data>
+      {% include 'partials/cabinet/sidebar.html.twig' %}
+      {% include 'partials/cabinet/main.html.twig' %}
+    </div>
+  </div>
+</section>
+
+<div class="cab-toast-stack" x-data="cabToast">
+  <template x-for="t in toasts" :key="t.id">
+    <div class="cab-toast" :class="t.type==='error' ? 'is-error' : 'is-success'" x-text="t.message"></div>
+  </template>
+</div>
+
+{% include 'partials/cabinet/modals.html.twig' %}
+
+<script>
+  window.CABINET_SITE_URL  = '{{ base_url_absolute|raw }}';
+  window.CABINET_ROUTE_APP = '{{ route_app }}';
+  window.CABINET_ROUTE_API = '{{ app.plugins.cabinet.route_api_base ?? '/api/cabinet' }}';
+</script>
+{% endblock %}

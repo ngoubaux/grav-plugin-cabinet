@@ -78,6 +78,14 @@
              @click="$store.cab.setTab('communication')">Communication</div>
       </div>
 
+      <div class="px-3.5 py-2 border-b border-zinc-200 dark:border-zinc-700 bg-white/80 dark:bg-zinc-900/70 text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-2">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-[color-mix(in_srgb,var(--color-primary)_40%,transparent)] bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)] text-primary font-medium">
+          Client sélectionné
+        </span>
+        <strong class="text-zinc-700 dark:text-zinc-200"
+                x-text="(($store.cab.activeClient?.first_name || '') + ' ' + ($store.cab.activeClient?.last_name || '')).trim() || '—'"></strong>
+      </div>
+
       <div class="flex-1 overflow-y-auto p-5 max-md:p-3.5">
         {% include 'partials/cabinet/tab-fiche.html.twig' %}
         {% include 'partials/cabinet/tab-seances.html.twig' %}
