@@ -27,6 +27,9 @@ class Api
     /** @var \Grav\Plugin\Cabinet\Sms */
     private $sms;
 
+    /** @var \Grav\Plugin\Cabinet\Profile */
+    private $profile;
+
     public function __construct(
         \Grav\Plugin\Cabinet\Core $core,
         \Grav\Plugin\Cabinet\Clients $clients,
@@ -34,7 +37,8 @@ class Api
         \Grav\Plugin\Cabinet\Seances $seances,
         \Grav\Plugin\Cabinet\Facturation $facturation,
         \Grav\Plugin\Cabinet\Import $import,
-        \Grav\Plugin\Cabinet\Sms $sms
+        \Grav\Plugin\Cabinet\Sms $sms,
+        \Grav\Plugin\Cabinet\Profile $profile
     ) {
         $this->core = $core;
         $this->clients = $clients;
@@ -43,6 +47,7 @@ class Api
         $this->facturation = $facturation;
         $this->import = $import;
         $this->sms = $sms;
+        $this->profile = $profile;
     }
 
     public function handleRequest(): void
@@ -199,6 +204,22 @@ class Api
         if ($path === $apiBase . '/changelog' && $method === 'GET') {
             $this->core->requireGravSession();
             $this->serveChangelog();
+        }
+
+        // ── Profile / paramètres praticien ────────────────────────────────────
+        if ($path === $apiBase . '/profile' && $method === 'GET') {
+            $this->core->requireGravSession();
+            $this->profile->getProfile();
+        }
+
+        if ($path === $apiBase . '/profile' && $method === 'PUT') {
+            $this->core->requireGravSession();
+            $this->profile->saveProfile();
+        }
+
+        if ($path === $apiBase . '/profile/api-key' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->profile->regenerateApiKey();
         }
 
         $this->core->jsonExit(['error' => 'Route not found'], 404);

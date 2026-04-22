@@ -1,6 +1,6 @@
 {% extends 'partials/base.html.twig' %}
 
-{% set cab_ver = '20260420-07' %}
+{% set cab_ver = '20260422-01' %}
 {% set route_app = app.plugins.cabinet.route_app_base ?? '/cabinet' %}
 
 {% block stylesheets %}
@@ -10,6 +10,7 @@
 
 {% block javascripts %}
   {{ parent() }}
+  {% do assets.addJs('https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js', {group: 'bottom', priority: 25}) %}
   {% do assets.addJs('https://apis.google.com/js/api.js', {group: 'head', loading: 'defer'}) %}
   {% do assets.addJs('https://accounts.google.com/gsi/client', {group: 'head', loading: 'async'}) %}
   {# utils — chargés en premier, pas de dépendances entre eux #}
@@ -28,6 +29,7 @@
   {% do assets.addJs(route_app ~ '/components/modal.js?v=' ~ cab_ver,     {group: 'bottom', priority: 7}) %}
   {% do assets.addJs(route_app ~ '/components/accordion.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
   {% do assets.addJs(route_app ~ '/components/drive-bar.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
+  {% do assets.addJs(route_app ~ '/components/dashboard.js?v=' ~ cab_ver, {group: 'bottom', priority: 6}) %}
   {# main — point d'entrée Alpine, enregistre tout #}
   {% do assets.addJs(route_app ~ '/main.js?v=' ~ cab_ver,            {group: 'bottom', priority: 5}) %}
 {% endblock %}

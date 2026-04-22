@@ -22,8 +22,16 @@ class Communication
             return $result;
         }
 
+        $practitionerId = $this->core->getCurrentPractitionerId();
+        $legacyId       = $this->core->getLegacyPractitionerId();
+
         foreach ($dir->getCollection() as $storageKey => $record) {
             $arr = $this->flexObjectToArray($record);
+
+            if (!$this->belongsToPractitioner($arr, $practitionerId, $legacyId)) {
+                continue;
+            }
+
             $clientId = (string) ($arr['client_uuid'] ?? '');
             if ($clientId === '') {
                 continue;
@@ -79,6 +87,7 @@ class Communication
             $obj = $dir->createObject([], $objectId);
             $obj->published = true;
             $obj->client_uuid = $uuid;
+            $obj->practitioner_id = $this->resolvePractitionerId();
             $obj->created_at = (string) ($entry['createdAt'] ?? date('c'));
             $obj->channel = (string) ($entry['channel'] ?? 'sms');
             $obj->to = (string) ($entry['to'] ?? '');
@@ -295,5 +304,23 @@ class Communication
         }
 
         return [];
+    }
+
+    private function resolvePractitionerId(): string
+    {
+        $id = $this->core->getCurrentPractitionerId();
+        return $id !== '' ? $id : $this->core->getLegacyPractitionerId();
+    }
+
+    private function belongsToPractitioner(array $record, string $practitionerId, string $legacyId): bool
+    {
+        if ($practitionerId === '') {
+            return true;
+        }
+        $pid = (string) ($record['practitioner_id'] ?? '');
+        if ($pid === '') {
+            $pid = $legacyId;
+        }
+        return $pid === $practitionerId;
     }
 }

@@ -11,6 +11,7 @@ const cabStore = {
   activeId: null,
   activeTab: 'fiche',
   showHelp: false,
+  showDashboard: true,
   smsEnabled: false,
   driveBilanPath: 'onyx/NoteAir5c/Cahiers/clients',
   driveConnected: false,
@@ -40,6 +41,9 @@ const cabStore = {
       compteRendu: '',
     },
   },
+
+  rendez_vous: [],
+  facturation: {},
 
   bilanFile: undefined,   // undefined=not loaded, null=not found, object=found
   bilanLoading: false,
@@ -178,6 +182,12 @@ const cabStore = {
     }) || '';
   },
 
+  openDashboard() {
+    this.showDashboard=true;
+    this.showHelp=false;
+    document.getElementById('app')?.classList.remove('client-open');
+  },
+
   selectClient(id) {
     const resolved=this.resolveClientId(id);
     if(!resolved) {
@@ -187,17 +197,22 @@ const cabStore = {
     this.activeId=resolved;
     this.activeTab='fiche';
     this.showHelp=false;
+    this.showDashboard=false;
     this.bilanFile=undefined;
     delete _bilanFileCache[resolved];
     this.initCommunicationDraft('sms');
-    const letter=String(this.clients[resolved]?.last_name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()[0]||null;
-    if(letter&&/[A-Z]/.test(letter)){this.selectedLetter=letter;this.currentPage=1;this.renderList();}
+    if(this.selectedLetter) {
+      const letter=String(this.clients[resolved]?.last_name||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase()[0]||null;
+      if(letter&&/[A-Z]/.test(letter)){this.selectedLetter=letter;this.currentPage=1;}
+    }
+    this.renderList();
     document.getElementById('app')?.classList.toggle('client-open',true);
     window.dispatchEvent(new CustomEvent('cabinet:client-selected',{detail:resolved}));
   },
 
   goBack() {
     this.activeId=null;
+    this.showDashboard=true;
     document.getElementById('app')?.classList.remove('client-open');
   },
 
@@ -704,6 +719,8 @@ const cabStore = {
       }
       this.clients=asPlainObject(data.clients);
       this.sessions=sessionsFromRendezVous(data.rendez_vous||[],this.clients);
+      this.rendez_vous=Array.isArray(data.rendez_vous) ? data.rendez_vous : [];
+      this.facturation=(data.facturation&&typeof data.facturation==='object') ? data.facturation : {};
         const serverComms=asPlainObject(data.communications||{});
       const cfg=data.config||{};
       if(cfg.google_oauth_client_id) localStorage.setItem('gdrive_client_id',cfg.google_oauth_client_id);

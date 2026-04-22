@@ -127,36 +127,171 @@
               x-text="isEdit ? 'Mettre à jour' : 'Enregistrer la séance'"></button>
     </div>
 
-    {# ── Configuration Google ── #}
+    {# ── Paramètres praticien ── #}
     <div x-show="$store.cab.modal.type==='settings'" x-data="cabinetSettingsModal">
-      <div class="flex justify-between items-center mb-4">
-        <span class="text-[15px] font-semibold">Configuration Google</span>
+      <div class="flex justify-between items-center mb-3">
+        <span class="text-[15px] font-semibold">Paramètres</span>
         <button class="bg-transparent border-none text-[18px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-none hover:text-zinc-700 dark:hover:text-zinc-200 transition-colors" @click="$store.cab.closeModal()">&#215;</button>
       </div>
-      <div class="internal-badge">Ces paramètres sont stockés sur cet appareil uniquement</div>
-      <div class="field-grid">
-        <div class="field field-full">
-          <label>Google OAuth2 Client ID</label>
-          <input x-model="clientId" placeholder="xxxx.apps.googleusercontent.com">
-          <span class="field-hint">
-            Google Cloud Console → APIs → Drive API → Identifiants → Client OAuth 2.0<br>
-            Origine autorisée : <strong>{{ base_url_absolute }}</strong>
-          </span>
-        </div>
-        <div class="field field-full">
-          <label>Identifiant du calendrier Google</label>
-          <input x-model="calId" placeholder="xxxx@group.calendar.google.com">
-          <span class="field-hint">
-            Paramètres du calendrier → « Adresse de l'agenda ». Laisser vide pour désactiver.
-          </span>
-        </div>
-        <div class="field">
-          <label>Clients par page</label>
-          <input type="number" x-model.number="pageSize" min="5" max="100" step="1">
-          <span class="field-hint">Nombre de clients affichés par page dans la liste (5–100).</span>
+
+      {# Onglets #}
+      <div class="flex mb-4 border border-zinc-200 dark:border-zinc-700 rounded-lg overflow-hidden text-[11px]">
+        <template x-for="t in [{id:'praticien',label:'Praticien'},{id:'connexions',label:'Google'},{id:'communications',label:'Comms'},{id:'page_prep',label:'Page accueil'},{id:'systeme',label:'Système'}]" :key="t.id">
+          <div class="flex-1 text-center px-2 py-1.5 cursor-pointer transition-colors"
+               :class="tab===t.id ? 'bg-primary text-white font-semibold' : 'text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'"
+               @click="tab=t.id" x-text="t.label"></div>
+        </template>
+      </div>
+
+      <div x-show="loading" class="text-center py-6 text-zinc-400 text-[13px]">Chargement…</div>
+
+      {# ── Onglet Praticien ── #}
+      <div x-show="!loading && tab==='praticien'">
+        <div class="field-grid">
+          <div class="field"><label>Nom affiché</label><input x-model="form.practitioner_name" placeholder="Prénom Nom"></div>
+          <div class="field"><label>Titre / spécialité</label><input x-model="form.practitioner_title" placeholder="Praticien Shiatsu…"></div>
+          <div class="field"><label>Téléphone</label><input x-model="form.practitioner_phone" placeholder="06 XX XX XX XX"></div>
+          <div class="field"><label>Prix 1ʳᵉ séance (€)</label><input type="number" x-model="form.practitioner_first_session_price" min="0" step="1"></div>
+          <div class="field field-full"><label>Site web</label><input x-model="form.practitioner_website" placeholder="https://…"></div>
+          <div class="field field-full"><label>URL prise de RDV</label><input x-model="form.practitioner_booking_url" placeholder="https://resalib.fr/…"></div>
+          <div class="field field-full"><label>Adresse (rue)</label><input x-model="form.practitioner_address_street" placeholder="1 rue de la Paix"></div>
+          <div class="field field-full"><label>Adresse (complément)</label><input x-model="form.practitioner_address_details" placeholder="Bât A, porte de gauche…"></div>
+          <div class="field"><label>Ville / code postal</label><input x-model="form.practitioner_address_city" placeholder="75001 Paris"></div>
+          <div class="field"><label>Code d'accès</label><input x-model="form.practitioner_access_code" placeholder="1234A"></div>
         </div>
       </div>
-      <button class="btn-save" @click="save()">Enregistrer et connecter</button>
+
+      {# ── Onglet Google ── #}
+      <div x-show="!loading && tab==='connexions'">
+        <div class="field-grid">
+          <div class="field field-full">
+            <label>Google OAuth2 Client ID</label>
+            <input x-model="form.google_oauth_client_id" placeholder="xxxx.apps.googleusercontent.com">
+            <span class="field-hint">Google Cloud Console → APIs → Drive API → Identifiants → Client OAuth 2.0.<br>Origine autorisée : <strong>{{ base_url_absolute }}</strong></span>
+          </div>
+          <div class="field field-full">
+            <label>Identifiant du calendrier Google</label>
+            <input x-model="form.google_calendar_id" placeholder="xxxx@group.calendar.google.com">
+            <span class="field-hint">Paramètres du calendrier → « Adresse de l'agenda ». Laisser vide pour désactiver.</span>
+          </div>
+          <div class="field field-full">
+            <label>Chemin Drive (dossier bilans)</label>
+            <input x-model="form.drive_bilan_path" placeholder="Mon Drive/clients">
+            <span class="field-hint">Chemin relatif dans votre Google Drive vers le dossier contenant les bilans PDF clients.</span>
+          </div>
+        </div>
+      </div>
+
+      {# ── Onglet Communications ── #}
+      <div x-show="!loading && tab==='communications'">
+        <div class="field-grid">
+          <div class="field field-full">
+            <label>URL avis Google</label>
+            <input x-model="form.communication_google_review_url" placeholder="https://g.page/r/…/review">
+          </div>
+          <div class="field field-full">
+            <label>Template SMS préparation visite</label>
+            <textarea rows="4" x-model="form.communication_template_prep_visite" placeholder="Bonjour {{first_name}},&#10;&#10;Afin de préparer notre première séance…"></textarea>
+            <span class="field-hint">Variables : <code>{{first_name}}</code> <code>{{session_slot}}</code> <code>{{preparation_link}}</code> <code>{{duration}}</code></span>
+          </div>
+          <div class="field field-full">
+            <label>Template SMS compte-rendu</label>
+            <textarea rows="3" x-model="form.communication_template_compte_rendu" placeholder="Bonjour {{first_name}},&#10;&#10;Merci pour votre confiance…"></textarea>
+            <span class="field-hint">Variables : <code>{{first_name}}</code> <code>{{session_date_label}}</code> <code>{{google_review_url}}</code></span>
+          </div>
+          <div class="field field-full">
+            <label>Template relance</label>
+            <textarea rows="3" x-model="form.communication_template_relance" placeholder="Bonjour {{first_name}},…"></textarea>
+          </div>
+        </div>
+      </div>
+
+      {# ── Onglet Page accueil / préparation ── #}
+      <div x-show="!loading && tab==='page_prep'">
+        <p class="text-[12px] text-zinc-500 dark:text-zinc-400 mb-2">
+          Rédigez la page complète en <strong>Markdown</strong>. Les <code>{{variables}}</code> sont remplacées automatiquement par les données du client et du rendez-vous. Laissez vide pour utiliser le rendu automatique.
+        </p>
+        <details class="mb-3 text-[11px] border border-zinc-200 dark:border-zinc-700 rounded-lg">
+          <summary class="px-3 py-1.5 cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 select-none">Variables disponibles</summary>
+          <div class="px-3 pb-2.5 pt-1 grid grid-cols-2 gap-x-4 gap-y-0.5">
+            <span><code>{{first_name}}</code> – prénom</span>
+            <span><code>{{last_name}}</code> – nom</span>
+            <span><code>{{appointment_date}}</code> – date RDV</span>
+            <span><code>{{appointment_time}}</code> – heure RDV</span>
+            <span><code>{{appointment_type}}</code> – type séance</span>
+            <span><code>{{duration}}</code> – durée (min)</span>
+            <span><code>{{price}}</code> – tarif 1ʳᵉ séance</span>
+            <span><code>{{pract_name}}</code> – votre nom</span>
+            <span><code>{{pract_phone}}</code> – votre téléphone</span>
+            <span><code>{{pract_website}}</code> – votre site web</span>
+            <span><code>{{booking_url}}</code> – lien prise de RDV</span>
+            <span><code>{{address_street}}</code> – rue</span>
+            <span><code>{{address_city}}</code> – ville</span>
+            <span><code>{{address}}</code> – adresse complète</span>
+            <span><code>{{access_code}}</code> – code d'accès</span>
+          </div>
+        </details>
+        <div class="field-grid">
+          <div class="field field-full">
+            <label>Contenu de la page</label>
+            <textarea rows="18" x-model="form.prep_page_content" class="font-mono text-[11px]"
+              placeholder="Bonjour {{first_name}},&#10;&#10;Je suis ravi de vous accueillir le **{{appointment_date}}** à **{{appointment_time}}**.&#10;&#10;## 📍 Adresse&#10;&#10;**{{address_street}}**  &#10;{{address_city}} — code : **{{access_code}}**&#10;&#10;…"></textarea>
+            <span class="field-hint">Markdown standard — titres avec <code>##</code>, gras avec <code>**…**</code>, listes avec <code>-</code>, liens <code>[texte](url)</code>.</span>
+          </div>
+          <div class="field field-full">
+            <label>Mention de pied de page</label>
+            <input x-model="form.prep_page_footer"
+              placeholder="Cette approche ne se substitue pas à un traitement médical.">
+          </div>
+        </div>
+      </div>
+
+      {# ── Onglet Système ── #}
+      <div x-show="!loading && tab==='systeme'">
+        <div class="field-grid">
+          <div class="field field-full">
+            <label class="flex items-center gap-2 cursor-pointer select-none">
+              <button type="button" role="switch" :aria-checked="form.sms_enabled" @click="form.sms_enabled=!form.sms_enabled"
+                      class="relative inline-flex items-center w-11 h-6 rounded-full border-none p-[2px] transition-colors shrink-0 cursor-pointer focus:outline-2 focus:outline-offset-2 focus:outline-primary"
+                      :class="form.sms_enabled ? 'bg-primary' : 'bg-zinc-300 dark:bg-zinc-600'">
+                <span class="w-5 h-5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-transform"
+                      :class="form.sms_enabled ? 'translate-x-5' : 'translate-x-0'"></span>
+              </button>
+              <span class="text-[13px]">Rappels SMS activés</span>
+            </label>
+          </div>
+          <div class="field">
+            <label>Clients par page</label>
+            <input type="number" x-model.number="pageSize" min="5" max="100" step="1">
+            <span class="field-hint">Nombre de clients affichés par page (5–100).</span>
+          </div>
+          <div class="field field-full">
+            <label>Clé API (accès externe)</label>
+            <div class="flex gap-2 items-center">
+              <input class="flex-1 font-mono text-[11px]"
+                     :value="apiKeyVisible ? apiKeyFull : apiKeyMasked"
+                     :placeholder="hasApiKey ? '' : 'Aucune clé — cliquez Générer'"
+                     readonly>
+              <button type="button" class="shrink-0 px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 text-[11px] text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                      x-show="hasApiKey && apiKeyFull"
+                      @click="toggleKeyVisibility()"
+                      x-text="apiKeyVisible ? 'Masquer' : 'Afficher'"></button>
+            </div>
+            <span class="field-hint">Utilisée dans l'en-tête <code>X-Api-Key</code> pour les appels scripts / cron / Make.com.</span>
+          </div>
+          <div class="field field-full">
+            <button type="button"
+                    class="px-3.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-600 text-[12px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                    @click="regenerateApiKey()">
+              {{ hasApiKey ? 'Regénérer la clé API' : 'Générer une clé API' }}
+            </button>
+            <span class="field-hint mt-1 block text-amber-600 dark:text-amber-400">⚠ Toute ancienne clé sera immédiatement invalidée.</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-save mt-4" @click="save()" :disabled="saving || loading"
+              x-text="saving ? 'Enregistrement…' : 'Enregistrer'"></button>
     </div>
 
     {# ── Import données ── #}

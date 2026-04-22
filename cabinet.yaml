@@ -1,5 +1,8 @@
 enabled: true
 
+# Praticien propriétaire des enregistrements sans practitioner_id (données antérieures au multi-utilisateur)
+legacy_practitioner_id: 'ngoub'
+
 # Routes configurables
 route_app_base: '/cabinet'       # Slug de la page Cabinet (ex: /cabinet, /mon-espace, /mypractice)
 route_api_base: '/api/cabinet'   # Base des endpoints API métier

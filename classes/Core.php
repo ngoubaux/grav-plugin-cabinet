@@ -10,6 +10,9 @@ class Core
     private ?string $routeAppBase = null;
     private ?string $routeApiBase = null;
 
+    /** Practitioner resolved from an API-key-only request (no Grav session). */
+    private ?string $apiKeyPractitionerId = null;
+
     public function __construct()
     {
         $config = Grav::instance()['config'] ?? null;
@@ -75,21 +78,69 @@ class Core
             return;
         }
 
-        $headers = function_exists('getallheaders') ? getallheaders() : [];
-        $received = $headers['X-Api-Key'] ?? $headers['x-api-key'] ?? ($_SERVER['HTTP_X_API_KEY'] ?? '');
-        $config   = $this->grav()['config'];
-        $mainKey  = trim((string) $config->get('plugins.cabinet.api_key', ''));
+        $received  = $this->getReceivedApiKey();
+        $config    = $this->grav()['config'];
+        $mainKey   = trim((string) $config->get('plugins.cabinet.api_key', ''));
         $pushToken = trim((string) $config->get('plugins.cabinet.sms_push_token', ''));
 
         if (!empty($mainKey) && $received === $mainKey) {
+            $this->apiKeyPractitionerId = $this->getLegacyPractitionerId();
             return;
         }
 
         if (!empty($pushToken) && $received === $pushToken) {
+            $this->apiKeyPractitionerId = $this->getLegacyPractitionerId();
+            return;
+        }
+
+        if ($this->checkUserApiKey($received)) {
             return;
         }
 
         $this->jsonExit(['error' => 'Unauthorized'], 401);
+    }
+
+    private function getReceivedApiKey(): string
+    {
+        $headers = function_exists('getallheaders') ? getallheaders() : [];
+        return trim((string) ($headers['X-Api-Key'] ?? $headers['x-api-key'] ?? ($_SERVER['HTTP_X_API_KEY'] ?? '')));
+    }
+
+    private function checkUserApiKey(string $received): bool
+    {
+        if ($received === '') {
+            return false;
+        }
+
+        $accountsPath = GRAV_ROOT . '/user/accounts';
+        if (!is_dir($accountsPath)) {
+            return false;
+        }
+
+        foreach (glob($accountsPath . '/*.yaml') ?: [] as $file) {
+            $content = @file_get_contents($file);
+            if ($content === false || strpos($content, $received) === false) {
+                continue;
+            }
+
+            try {
+                $data = \Grav\Common\Yaml::parse($content);
+            } catch (\Throwable $e) {
+                continue;
+            }
+
+            if (!is_array($data)) {
+                continue;
+            }
+
+            $userApiKey = trim((string) ($data['cabinet']['api_key'] ?? ''));
+            if ($userApiKey !== '' && $received === $userApiKey) {
+                $this->apiKeyPractitionerId = basename($file, '.yaml');
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public function corsHeaders(): void
@@ -160,5 +211,48 @@ class Core
             }
         }
         return $this->routeApiBase ?? '/api/cabinet';
+    }
+
+    /**
+     * Returns the username of the current practitioner.
+     * - Grav session: the authenticated user's username.
+     * - API-key request: the username whose cabinet.api_key matched (set by requireSessionOrApiKey).
+     * - Unauthenticated: empty string (no filtering applied).
+     */
+    public function getCurrentPractitionerId(): string
+    {
+        $user = Grav::instance()['user'] ?? null;
+        if ($user && $user->authenticated) {
+            return (string) ($user->username ?? '');
+        }
+        return $this->apiKeyPractitionerId ?? '';
+    }
+
+    /**
+     * Username that owns legacy records created before multi-user support.
+     * Defaults to 'ngoub' but is overridable via plugins.cabinet.legacy_practitioner_id.
+     */
+    public function getLegacyPractitionerId(): string
+    {
+        return (string) Grav::instance()['config']->get('plugins.cabinet.legacy_practitioner_id', 'ngoub');
+    }
+
+    /**
+     * Read a config value, preferring the current user's account cabinet: section
+     * over the global plugins.cabinet.* config.
+     *
+     * @param mixed $default
+     * @return mixed
+     */
+    public function getPractitionerConfig(string $key, $default = '')
+    {
+        $user = Grav::instance()['user'] ?? null;
+        if ($user && $user->authenticated) {
+            $userCabinet = $user->get('cabinet');
+            if (is_array($userCabinet) && array_key_exists($key, $userCabinet) && $userCabinet[$key] !== null && $userCabinet[$key] !== '') {
+                return $userCabinet[$key];
+            }
+        }
+        return Grav::instance()['config']->get('plugins.cabinet.' . $key, $default);
     }
 }

@@ -36,8 +36,21 @@ class Clients
             $this->core->jsonExit(['error' => 'Clients directory not found'], 500);
         }
 
+        $practitionerId = $this->core->getCurrentPractitionerId();
+        $legacyId       = $this->core->getLegacyPractitionerId();
+
         foreach ($dir->getCollection() as $uuid => $obj) {
             $data = $this->flexObjectToArray($obj);
+
+            if ($practitionerId !== '') {
+                $pid = (string) ($data['practitioner_id'] ?? '');
+                if ($pid === '') {
+                    $pid = $legacyId;
+                }
+                if ($pid !== $practitionerId) {
+                    continue;
+                }
+            }
 
             if (!empty($email) && !empty($data['email'])) {
                 if (strtolower((string) $data['email']) === strtolower($email)) {

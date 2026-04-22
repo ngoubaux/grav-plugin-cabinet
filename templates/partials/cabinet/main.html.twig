@@ -35,20 +35,28 @@
            :href="$store.cab.communicationSettings.googleReviewUrl"
            target="_blank" rel="noopener" title="Avis Google">⭐ Avis</a>
       </template>
+      <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-[5px] px-1.5 py-[2px] text-[12px] cursor-pointer leading-[1.5] font-[inherit] transition-colors shrink-0"
+              :class="$store.cab.showDashboard
+                ? 'text-primary border-primary bg-[color-mix(in_srgb,var(--color-primary)_8%,transparent)]'
+                : 'text-zinc-500 dark:text-zinc-400 hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)]'"
+              @click="$store.cab.showDashboard ? ($store.cab.showDashboard=false) : $store.cab.openDashboard()"
+              title="Tableau de bord">📊</button>
       <button class="bg-transparent border border-zinc-200 dark:border-zinc-700 rounded-[5px] px-1.5 py-[2px] text-[12px] cursor-pointer text-zinc-500 dark:text-zinc-400 leading-[1.5] font-[inherit] hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)] transition-colors shrink-0"
               @click="$store.cab.openModal('settings')" title="Paramètres">⚙</button>
     </div>
   </div>
 
   {% include 'partials/cabinet/tab-aide.html.twig' %}
+  {% include 'partials/cabinet/tab-dashboard.html.twig' %}
 
-  <div class="flex-1 flex flex-col items-center justify-center text-zinc-500 dark:text-zinc-400 gap-2" x-show="!$store.cab.activeId && !$store.cab.showHelp">
+  <div class="flex-1 flex flex-col items-center justify-center text-zinc-500 dark:text-zinc-400 gap-2"
+       x-show="!$store.cab.activeId && !$store.cab.showHelp && !$store.cab.showDashboard">
     <div class="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-lg">&#128100;</div>
     <span class="text-[13px]">Sélectionnez un client</span>
     <span class="text-xs text-zinc-400 dark:text-zinc-500">ou créez un nouveau dossier</span>
   </div>
 
-  <template x-if="$store.cab.activeId && !$store.cab.showHelp">
+  <template x-if="$store.cab.activeId && !$store.cab.showHelp && !$store.cab.showDashboard">
     <div class="flex flex-col flex-1 min-h-0">
 
       <div class="flex border-b border-zinc-200 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 overflow-x-auto max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">

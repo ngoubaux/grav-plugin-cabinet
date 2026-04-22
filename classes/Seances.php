@@ -39,7 +39,6 @@ class Seances
         $rendezVous = $this->collectFromDirectory($records, $data['clients']);
         $facturation = $this->facturation->summarize($data['sessions']);
 
-        $config = Grav::instance()['config'];
         return [
             'clients' => $data['clients'],
             'sessions' => $data['sessions'],
@@ -48,14 +47,14 @@ class Seances
             'rendez_vous_by_day' => $this->indexByDay($rendezVous),
             'facturation' => $facturation,
             'config' => [
-                'google_oauth_client_id' => (string) $config->get('plugins.cabinet.google_oauth_client_id', ''),
-                'google_calendar_id'     => (string) $config->get('plugins.cabinet.google_calendar_id', ''),
-                'drive_bilan_path'       => (string) $config->get('plugins.cabinet.drive_bilan_path', 'onyx/NoteAir5c/Cahiers/clients'),
-                'sms_enabled'            => (bool)   $config->get('plugins.cabinet.sms_enabled', false),
-                'communication_google_review_url'       => (string) $config->get('plugins.cabinet.communication_google_review_url', ''),
-                'communication_template_prep_visite'    => (string) $config->get('plugins.cabinet.communication_template_prep_visite', ''),
-                'communication_template_relance'        => (string) $config->get('plugins.cabinet.communication_template_relance', ''),
-                'communication_template_compte_rendu'   => (string) $config->get('plugins.cabinet.communication_template_compte_rendu', ''),
+                'google_oauth_client_id' => (string) $this->core->getPractitionerConfig('google_oauth_client_id', ''),
+                'google_calendar_id'     => (string) $this->core->getPractitionerConfig('google_calendar_id', ''),
+                'drive_bilan_path'       => (string) $this->core->getPractitionerConfig('drive_bilan_path', 'onyx/NoteAir5c/Cahiers/clients'),
+                'sms_enabled'            => (bool)   $this->core->getPractitionerConfig('sms_enabled', false),
+                'communication_google_review_url'       => (string) $this->core->getPractitionerConfig('communication_google_review_url', ''),
+                'communication_template_prep_visite'    => (string) $this->core->getPractitionerConfig('communication_template_prep_visite', ''),
+                'communication_template_relance'        => (string) $this->core->getPractitionerConfig('communication_template_relance', ''),
+                'communication_template_compte_rendu'   => (string) $this->core->getPractitionerConfig('communication_template_compte_rendu', ''),
             ],
         ];
     }
@@ -98,6 +97,7 @@ class Seances
 
         $contact = $dir->createObject([], $uuid);
         $this->applyClientFields($contact, $data, $uuid);
+        $contact->practitioner_id = $this->resolvePractitionerId();
         if ($contact->save() === false) {
             $this->core->jsonExit(['error' => 'Save failed'], 500);
         }
@@ -156,6 +156,7 @@ class Seances
 
         $record = $dir->createObject([], $flexId);
         $this->applyRendezvousFields($record, $data, $contactUuid, $sessionId);
+        $record->practitioner_id = $this->resolvePractitionerId();
         if ($record->save() === false) {
             $this->core->jsonExit(['error' => 'Save failed — check required fields (date, duration)'], 500);
         }
@@ -290,12 +291,18 @@ class Seances
         $clientsDir = $this->getClientsDirectory($flex);
         $rendezVousDir = $this->getRendezVousDirectory($flex);
 
+        $practitionerId = $this->core->getCurrentPractitionerId();
+        $legacyId       = $this->core->getLegacyPractitionerId();
+
         $sessions = [];
         $rendezVousRecords = [];
 
         if ($rendezVousDir) {
             foreach ($rendezVousDir->getCollection() as $storageKey => $record) {
                 $arr = $this->flexObjectToArray($record);
+                if (!$this->belongsToPractitioner($arr, $practitionerId, $legacyId)) {
+                    continue;
+                }
                 $arr['_flex_key'] = (string) $storageKey;
                 $rendezVousRecords[] = $arr;
             }
@@ -319,6 +326,9 @@ class Seances
 
         foreach ($clientsDir->getCollection() as $uuid => $contact) {
             $data = $this->flexObjectToArray($contact);
+            if (!$this->belongsToPractitioner($data, $practitionerId, $legacyId)) {
+                continue;
+            }
 
             $appointments = $appointmentsFromRendezVous[$uuid] ?? [];
 
@@ -649,5 +659,33 @@ class Seances
         }
 
         return 'scheduled';
+    }
+
+    /**
+     * Returns the practitioner_id to stamp on new records.
+     * Uses the authenticated user's username; falls back to the legacy owner
+     * when the request is authenticated only via API key.
+     */
+    private function resolvePractitionerId(): string
+    {
+        $id = $this->core->getCurrentPractitionerId();
+        return $id !== '' ? $id : $this->core->getLegacyPractitionerId();
+    }
+
+    /**
+     * Returns true when a record's practitioner_id matches the current practitioner.
+     * Records with an empty practitioner_id are treated as belonging to the legacy owner.
+     * When $practitionerId is '' (API-key-only request), all records are visible.
+     */
+    private function belongsToPractitioner(array $record, string $practitionerId, string $legacyId): bool
+    {
+        if ($practitionerId === '') {
+            return true;
+        }
+        $pid = (string) ($record['practitioner_id'] ?? '');
+        if ($pid === '') {
+            $pid = $legacyId;
+        }
+        return $pid === $practitionerId;
     }
 }

@@ -13,6 +13,7 @@ use Grav\Plugin\Cabinet\Facturation;
 use Grav\Plugin\Cabinet\Seances;
 use Grav\Plugin\Cabinet\Import;
 use Grav\Plugin\Cabinet\Sms;
+use Grav\Plugin\Cabinet\Profile;
 
 require_once __DIR__ . '/classes/Core.php';
 require_once __DIR__ . '/classes/Api.php';
@@ -22,6 +23,7 @@ require_once __DIR__ . '/classes/Seances.php';
 require_once __DIR__ . '/classes/Facturation.php';
 require_once __DIR__ . '/classes/Import.php';
 require_once __DIR__ . '/classes/Sms.php';
+require_once __DIR__ . '/classes/Profile.php';
 require_once __DIR__ . '/classes/Metrics.php';
 require_once __DIR__ . '/classes/Flex/RendezVousObject.php';
 require_once __DIR__ . '/classes/Flex/ClientObject.php';
@@ -54,6 +56,9 @@ class CabinetPlugin extends Plugin
 
     /** @var Sms|null */
     private $sms;
+
+    /** @var Profile|null */
+    private $profile;
 
     public static function getSubscribedEvents(): array
     {
@@ -242,13 +247,14 @@ class CabinetPlugin extends Plugin
             return;
         }
 
-        $this->core = new Core();
-        $this->clients = new Clients($this->core);
+        $this->core          = new Core();
+        $this->clients       = new Clients($this->core);
         $this->communication = new Communication($this->core);
-        $this->facturation = new Facturation($this->core);
-        $this->seances = new Seances($this->core, $this->facturation, $this->communication);
-        $this->import  = new Import($this->core);
-        $this->sms     = new Sms($this->core);
+        $this->facturation   = new Facturation($this->core);
+        $this->seances       = new Seances($this->core, $this->facturation, $this->communication);
+        $this->import        = new Import($this->core);
+        $this->sms           = new Sms($this->core);
+        $this->profile       = new Profile($this->core);
 
         $this->api = new Api(
             $this->core,
@@ -257,7 +263,8 @@ class CabinetPlugin extends Plugin
             $this->seances,
             $this->facturation,
             $this->import,
-            $this->sms
+            $this->sms,
+            $this->profile
         );
     }
 }

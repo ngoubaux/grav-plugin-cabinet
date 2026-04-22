@@ -231,3 +231,7 @@ form:
         sms_rappel_sent_date:
             type: hidden
             label: Date dernier rappel SMS
+
+        practitioner_id:
+            type: hidden
+            label: Practitioner ID

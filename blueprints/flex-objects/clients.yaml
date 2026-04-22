@@ -169,3 +169,7 @@ form:
       type: url
       label: Website
 
+    practitioner_id:
+      type: hidden
+      label: Practitioner ID
+

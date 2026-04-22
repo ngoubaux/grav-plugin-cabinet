@@ -1,5 +1,19 @@
 <div x-show="$store.cab.activeTab==='fiche'">
 
+  {# ── Barre d'action ── #}
+  <div class="flex items-center justify-between mb-4">
+    <span class="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono select-all"
+          x-text="$store.cab.activeId"></span>
+    <a class="inline-flex items-center gap-1.5 text-[12px] no-underline border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-1.5 transition-colors hover:text-primary hover:border-primary hover:bg-[color-mix(in_srgb,var(--color-primary)_5%,transparent)]"
+       :class="$store.cab.activeClientPageUrl !== '/preparons-votre-visite'
+         ? 'text-zinc-600 dark:text-zinc-300'
+         : 'text-zinc-400 dark:text-zinc-500 pointer-events-none opacity-50'"
+       :href="$store.cab.activeClientPageUrl"
+       target="_blank" rel="noopener">
+      🔗 Ouvrir la page client
+    </a>
+  </div>
+
   {# ── Stats ── #}
   <div class="grid grid-cols-4 gap-2.5 mb-5 max-md:grid-cols-2">
     <div class="bg-zinc-100 dark:bg-zinc-800 rounded-[10px] pt-3.5 px-2.5 pb-2.5 text-center border border-zinc-200 dark:border-zinc-700 transition-shadow hover:shadow-md">
@@ -18,8 +32,7 @@
            ? 'border-primary bg-[color-mix(in_srgb,var(--color-primary)_6%,var(--color-zinc-100))] dark:bg-[color-mix(in_srgb,var(--color-primary)_6%,var(--color-zinc-800))]'
            : 'bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700'">
       <div class="text-[16px] mb-1 opacity-70">📅</div>
-      <div class="text-lg font-semibold leading-tight"
-           :class="$store.cab.nextSessionLabel ? 'text-primary' : 'text-primary'"
+      <div class="text-lg font-semibold text-primary leading-tight"
            x-text="$store.cab.nextSessionLabel || '—'"></div>
       <div class="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 uppercase tracking-[.4px]">Prochaine séance</div>
     </div>
@@ -59,57 +72,6 @@
   <div class="btn-row">
     <button class="btn-save" @click="$store.cab.saveFiche()">Enregistrer</button>
     <button class="btn-ghost" @click="$store.cab.deleteClient()">Supprimer le dossier</button>
-  </div>
-
-  {# ── Lien Grav ── #}
-  <div class="mt-5">
-    <div class="section-label">Lien Grav</div>
-    <div class="grav-section">
-      <template x-if="$store.cab.activeClient?.grav_uuid">
-        <div>
-          <a class="grav-section-title grav-section-link"
-             :href="$store.cab.activeClientPageUrl"
-             target="_blank"
-             rel="noopener">
-            <div class="grav-dot found"></div>
-            <span>Contact Grav lié</span>
-            <span class="grav-section-open">Ouvrir la page client</span>
-          </a>
-          <div class="obs-label">UUID lié</div>
-          <div class="grav-uuid-display" x-text="$store.cab.activeClient.grav_uuid"></div>
-          <template x-if="$store.cab.activeClient.grav_rdv">
-            <div>
-              <div class="obs-label" style="margin-top:8px">Premier RDV enregistré</div>
-              <div style="font-size:13px" x-text="$store.cab.activeClient.grav_rdv"></div>
-            </div>
-          </template>
-        </div>
-      </template>
-
-      <template x-if="!$store.cab.activeClient?.grav_uuid">
-        <div class="grav-section-title">
-          <div class="grav-dot"
-               :class="{searching: $store.cab.activeClient?._gravSearching}"></div>
-          <span x-text="$store.cab.activeClient?._gravSearching
-            ? 'Recherche en cours…'
-            : ($store.cab.activeClient?._gravNotFound
-              ? 'Aucun contact trouvé sur Grav'
-              : 'Non lié à un contact Grav')"></span>
-          <button class="btn-grav"
-                  :disabled="$store.cab.activeClient?._gravSearching"
-                  @click="$store.cab.searchGravContact($store.cab.activeId)">
-            Rechercher sur Grav
-          </button>
-        </div>
-      </template>
-
-      <template x-if="!$store.cab.activeClient?.grav_uuid">
-        <div class="text-[12px] text-zinc-500 dark:text-zinc-400 mt-1.5">
-          La recherche utilise l'email du client en priorité, puis le nom et prénom. Une fois lié, vous pourrez ouvrir directement sa page client.
-        </div>
-      </template>
-
-    </div>
   </div>
 
 </div>
