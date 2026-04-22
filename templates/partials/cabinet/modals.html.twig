@@ -179,6 +179,24 @@
             <input x-model="form.drive_bilan_path" placeholder="Mon Drive/clients">
             <span class="field-hint">Chemin relatif dans votre Google Drive vers le dossier contenant les bilans PDF clients.</span>
           </div>
+          <div class="field field-full">
+            <label>Template PDF fiche client (praticien)</label>
+            <input x-model="form.template_client_pdf" placeholder="user/data/cabinet/templates/FicheTemplate_client.pdf">
+            <span class="field-hint">Chemin local vers le PDF utilisé comme fiche vierge client. Si vide, fallback sur la configuration globale puis le PDF intégré.</span>
+            <div class="mt-2 flex items-center gap-2">
+              <input type="file" accept="application/pdf" @change="uploadTemplate('template_client_pdf', $event)">
+              <span class="text-[11px] text-zinc-500" x-show="templateUploading.template_client_pdf">Upload en cours…</span>
+            </div>
+          </div>
+          <div class="field field-full">
+            <label>Template PDF fiche séance (praticien)</label>
+            <input x-model="form.template_seance_pdf" placeholder="user/data/cabinet/templates/FicheTemplate_rendezvous.pdf">
+            <span class="field-hint">Chemin local vers le PDF ajouté à chaque séance. Si vide, fallback sur template client praticien, puis global, puis PDF intégré.</span>
+            <div class="mt-2 flex items-center gap-2">
+              <input type="file" accept="application/pdf" @change="uploadTemplate('template_seance_pdf', $event)">
+              <span class="text-[11px] text-zinc-500" x-show="templateUploading.template_seance_pdf">Upload en cours…</span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -264,6 +282,15 @@
             <label>Clients par page</label>
             <input type="number" x-model.number="pageSize" min="5" max="100" step="1">
             <span class="field-hint">Nombre de clients affichés par page (5–100).</span>
+          </div>
+          <div class="field">
+            <label>Provider SMS</label>
+            <select x-model="form.sms_provider">
+              <option value="smsmobileapi">SMSMobileAPI (payant)</option>
+              <option value="simple_sms_gateway">Simple SMS Gateway</option>
+              <option value="android_queue">Android queue (MacroDroid/Termux)</option>
+            </select>
+            <span class="field-hint">Configuration par praticien.</span>
           </div>
           <div class="field field-full">
             <label>Clé API (accès externe)</label>

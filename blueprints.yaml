@@ -38,7 +38,7 @@ form:
             changelog_btn:
               type: display
               label: Changelog
-              content: '<a class="button button-small" href="#" data-remodal-target="changelog" data-remodal-changelog="/api/cabinet/changelog"><i class="fa fa-binoculars"></i> View Changelog</a>'
+              content: '<a class="button cab-changelog-btn" href="#" data-remodal-target="changelog" data-remodal-changelog="/api/cabinet/changelog"><i class="fa fa-binoculars"></i> View Changelog</a>'
 
             enabled:
               type: toggle
@@ -96,128 +96,30 @@ form:
               default: '/api/cabinet'
               placeholder: '/api/cabinet'
 
-        # TAB 3: Praticien
-        practitioner:
+        # TAB 3: Système
+        system:
           type: tab
-          title: Praticien
+          title: Système
           fields:
 
-            practitioner_name:
-              type: text
-              label: Nom du praticien
-              help: "Affiché dans l'email de bienvenue. Laissez vide pour utiliser le nom de l'auteur du site Grav."
-              placeholder: 'Jean Dupont'
+            practitioner_notice:
+              type: display
+              label: Configuration praticien
+              content: "Les paramètres praticien (Google, SMS provider, templates de communication, coordonnées) sont configurés dans l'application Cabinet, via le profil utilisateur connecté."
 
-            practitioner_title:
-              type: text
-              label: Titre / spécialité
-              placeholder: 'Praticien Shiatsu'
+            templates_notice:
+              type: display
+              label: Templates PDF des bilans
+              content: "Les templates PDF fiche client / fiche séance sont maintenant définis au niveau praticien, dans Paramètres > Google (profil Cabinet)."
 
-            practitioner_phone:
-              type: text
-              label: Téléphone
-              placeholder: '06 00 00 00 00'
-
-            practitioner_website:
-              type: text
-              label: Site web
-              placeholder: 'https://monsite.com'
-
-            practitioner_booking_url:
-              type: text
-              label: URL de prise de rendez-vous
-              help: "Lien affiché quand le client n'a pas encore de RDV planifié."
-              placeholder: 'https://calendly.com/moi'
-
-            practitioner_address_divider:
+            sms_section:
               type: section
-              title: Adresse
+              title: Scheduler SMS global
               underline: true
-
-            practitioner_address_street:
-              type: text
-              label: Adresse (rue)
-              placeholder: '1 rue de la Paix'
-
-            practitioner_address_details:
-              type: text
-              label: Complément d'adresse
-              placeholder: 'Bât. A – 2ème étage, porte droite'
-
-            practitioner_address_city:
-              type: text
-              label: Code postal et ville
-              placeholder: '75001 Paris'
-
-            practitioner_access_code:
-              type: text
-              label: Code d'accès
-              placeholder: '1234A'
-
-            practitioner_first_session_price:
-              type: text
-              label: Tarif première séance (€)
-              placeholder: '75'
-
-        # TAB 4: Google
-        google:
-          type: tab
-          title: Google
-          fields:
-
-            google_oauth_client_id:
-              type: text
-              label: OAuth Client ID
-              help: "Google Cloud Console → APIs → Identifiants → Client OAuth 2.0"
-              placeholder: xxxx.apps.googleusercontent.com
-
-            google_calendar_id:
-              type: text
-              label: Identifiant du calendrier Google
-              help: "Paramètres du calendrier → Adresse de l'agenda. Laisser vide pour désactiver."
-              placeholder: xxxx@group.calendar.google.com
-
-            drive_section:
-              type: section
-              title: Google Drive
-              underline: true
-
-            template_client_pdf:
-              type: file
-              label: Template PDF — fiche client
-              help: "PDF vierge envoyé sur Drive lors de la création d'un client (nommé Prénom Nom.pdf). Si vide, le template intégré est utilisé."
-              destination: 'user-data://cabinet/templates'
-              multiple: false
-              limit: 1
-              accept:
-                - application/pdf
-
-            template_seance_pdf:
-              type: file
-              label: Template PDF — fiche séance
-              help: "PDF vierge ajouté sur Drive pour chaque nouvelle séance (nommé Prénom Nom - Séance N.pdf). Si vide, le template fiche client est utilisé."
-              destination: 'user-data://cabinet/templates'
-              multiple: false
-              limit: 1
-              accept:
-                - application/pdf
-
-            drive_bilan_path:
-              type: text
-              label: Chemin des fiches clients sur Google Drive
-              help: "Dossier Drive où est déposée la fiche vierge de chaque client (une par client, nommée Prénom Nom.pdf). Séparateur : /. Sans slash au début ni à la fin."
-              placeholder: onyx/NoteAir5c/Cahiers/clients
-              default: 'onyx/NoteAir5c/Cahiers/clients'
-
-        # TAB 5: SMS
-        sms:
-          type: tab
-          title: SMS
-          fields:
 
             sms_enabled:
               type: toggle
-              label: SMS activés
+              label: Activation globale du scheduler SMS
               highlight: 1
               default: 0
               options:
@@ -226,66 +128,9 @@ form:
               validate:
                 type: bool
 
-            sms_provider:
-              type: select
-              label: Provider SMS
-              default: smsmobileapi
-              options:
-                smsmobileapi: SMSMobileAPI (payant)
-                simple_sms_gateway: Simple SMS Gateway (téléphone proxy)
-                android_queue: Android natif — file d'attente SMS (MacroDroid ou Termux)
-              help: "Choisissez le mode d'envoi SMS. android_queue écrit les SMS dans une file d'attente que votre téléphone Android récupère et envoie via MacroDroid ou Termux."
-
-            sms_push_token:
-              type: text
-              label: Token provider SMS
-              help: "Utilisé par SMSMobileAPI (clé API), Simple SMS Gateway (Authorization: Bearer) et Android natif (X-Api-Key dans les scripts Termux/MacroDroid). Si vide, les scripts Android utilisent la Clé API principale."
-              placeholder: token-ou-cle-provider
-
-            sms_simple_gateway_url:
-              type: text
-              label: URL Simple SMS Gateway
-              help: "Endpoint HTTP de votre passerelle téléphone (ex: https://.../send-sms). Le payload envoyé est {to, message}."
-              placeholder: https://votre-passerelle.example/send-sms
-
             sms_rappel_cron:
               type: text
               label: Heure d'envoi des rappels J-1
               help: "Expression cron — ex: '0 8 * * *' = tous les jours à 8h00"
               default: '0 8 * * *'
               placeholder: '0 8 * * *'
-
-        # TAB 6: Communication
-        communication:
-          type: tab
-          title: Communication
-          fields:
-
-            communication_google_review_url:
-              type: text
-              label: URL fiche Google Business (avis)
-              help: "Lien utilisé dans les messages de compte-rendu pour inviter le client à laisser un avis."
-              placeholder: 'https://g.page/r/XXXX/review'
-
-            communication_templates_section:
-              type: section
-              title: Templates SMS et Email
-              underline: true
-
-            communication_template_prep_visite:
-              type: textarea
-              rows: 10
-              label: Template SMS Préparation visite
-              help: "Variables disponibles\u00a0: {{first_name}}, {{session_slot}} (ex\u00a0: ' de lundi 28 avril \u00e0 10:00'), {{preparation_link}}, {{duration}} (ex\u00a0: 1h15), {{google_review_url}}"
-
-            communication_template_relance:
-              type: textarea
-              rows: 6
-              label: Template SMS Relance (optionnel)
-              help: "Variables: {{first_name}}, {{session_date}}, {{google_review_url}}"
-
-            communication_template_compte_rendu:
-              type: textarea
-              rows: 10
-              label: Template Email Compte-rendu
-              help: "Variables: {{first_name}}, {{session_date}}, {{session_date_label}}, {{google_review_url}}"

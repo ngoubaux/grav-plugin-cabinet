@@ -47,6 +47,7 @@ class Import
         $rows    = $this->parseCsv($csvContent);
         $log     = [];
         $created = $updated = $skipped = $errors = 0;
+        $practitionerId = $this->core->getCurrentPractitionerId();
 
         $flex = Grav::instance()['flex'] ?? null;
         $dir  = $this->getClientsDir($flex);
@@ -77,9 +78,9 @@ class Import
                 $payload['notes'] = "Code postal : $postal";
             }
 
-            $found = $phone ? $this->findClientByPhone($dir, $phone) : null;
+            $found = $phone ? $this->findClientByPhone($dir, $phone, $practitionerId) : null;
             if (!$found && $email) {
-                $found = $this->findClientByEmail($dir, $email);
+                $found = $this->findClientByEmail($dir, $email, $practitionerId);
             }
 
             if ($found) {
@@ -109,6 +110,7 @@ class Import
                     try {
                         $contact            = $dir->createObject([], $uuid);
                         $contact->published = true;
+                        $contact->practitioner_id = $this->resolvePractitionerId();
                         $this->applyClientFields($contact, $payload);
                         if ($contact->save() === false) {
                             $log[] = ['action' => 'ERROR', 'msg' => "Échec création : $lastName, $firstName"];
@@ -139,6 +141,7 @@ class Import
         $events  = $this->parseIcs($icsContent);
         $log     = [];
         $created = $updated = $skipped = $errors = 0;
+        $practitionerId = $this->core->getCurrentPractitionerId();
 
         $flex       = Grav::instance()['flex'] ?? null;
         $clientsDir = $this->getClientsDir($flex);
@@ -152,6 +155,9 @@ class Import
         $existingIndex = [];
         foreach ($rdvDir->getCollection() as $flexId => $record) {
             $arr  = $this->flexObjectToArray($record);
+            if (!$this->belongsToPractitioner($arr, $practitionerId)) {
+                continue;
+            }
             $cid  = (string) ($arr['contact_uuid'] ?? '');
             $date = (string) ($arr['appointment_date'] ?? '');
             $hour = (string) ($arr['appointment_hour'] ?? '');
@@ -194,7 +200,7 @@ class Import
             $descLine = explode("\n", (string) ($ev['DESCRIPTION'] ?? ''))[0] ?? '';
             $motif    = strtolower(trim($descLine)) !== 'à domicile' ? trim($descLine) : '';
 
-            $client = $this->findClientByName($clientsDir, $firstName, $lastName);
+            $client = $this->findClientByName($clientsDir, $firstName, $lastName, $practitionerId);
             if (!$client) {
                 $log[] = ['action' => 'SKIP', 'msg' => "Client introuvable : $lastName, $firstName"];
                 $skipped++;
@@ -245,6 +251,7 @@ class Import
                         $record    = $rdvDir->createObject([], $flexId);
                         $this->applyRdvFields($record, $payload, $sessionId);
                         $record->published = true;
+                        $record->practitioner_id = $this->resolvePractitionerId();
                         if ($record->save() === false) {
                             $log[] = ['action' => 'ERROR', 'msg' => "Échec CREATE rdv $dateStr $hourStr $lastName"];
                             $errors++;
@@ -451,10 +458,13 @@ class Import
         return strtolower($value);
     }
 
-    private function findClientByEmail($dir, string $email): ?array
+    private function findClientByEmail($dir, string $email, string $practitionerId): ?array
     {
         foreach ($dir->getCollection() as $uuid => $contact) {
             $data = $this->flexObjectToArray($contact);
+            if (!$this->belongsToPractitioner($data, $practitionerId)) {
+                continue;
+            }
             if (!empty($data['email']) && strtolower((string) $data['email']) === strtolower($email)) {
                 return ['uuid' => (string) $uuid, 'contact' => $contact];
             }
@@ -462,7 +472,7 @@ class Import
         return null;
     }
 
-    private function findClientByPhone($dir, string $phone): ?array
+    private function findClientByPhone($dir, string $phone, string $practitionerId): ?array
     {
         $needle = (string) preg_replace('/\s+/', '', $phone);
         if ($needle === '') {
@@ -470,6 +480,9 @@ class Import
         }
         foreach ($dir->getCollection() as $uuid => $contact) {
             $data   = $this->flexObjectToArray($contact);
+            if (!$this->belongsToPractitioner($data, $practitionerId)) {
+                continue;
+            }
             $stored = (string) preg_replace('/\s+/', '', (string) ($data['phone1'] ?? ''));
             if ($stored !== '' && $stored === $needle) {
                 return ['uuid' => (string) $uuid, 'contact' => $contact];
@@ -478,12 +491,15 @@ class Import
         return null;
     }
 
-    private function findClientByName($dir, string $firstName, string $lastName): ?array
+    private function findClientByName($dir, string $firstName, string $lastName, string $practitionerId): ?array
     {
         $nFirst = $this->normalizeForSearch($firstName);
         $nLast  = $this->normalizeForSearch($lastName);
         foreach ($dir->getCollection() as $uuid => $contact) {
             $data = $this->flexObjectToArray($contact);
+            if (!$this->belongsToPractitioner($data, $practitionerId)) {
+                continue;
+            }
             if (
                 $this->normalizeForSearch((string) ($data['first_name'] ?? '')) === $nFirst
                 && $this->normalizeForSearch((string) ($data['last_name'] ?? '')) === $nLast
@@ -531,5 +547,23 @@ class Import
         $record->observations     = (string) ($data['observations'] ?? '');
         $record->notes            = (string) ($data['observations'] ?? '');
         $record->published        = true;
+    }
+
+    private function resolvePractitionerId(): string
+    {
+        $id = $this->core->getCurrentPractitionerId();
+        if ($id === '') {
+            $this->core->jsonExit(['error' => 'Practitioner context required'], 401);
+        }
+        return $id;
+    }
+
+    private function belongsToPractitioner(array $record, string $practitionerId): bool
+    {
+        if ($practitionerId === '') {
+            return false;
+        }
+        $pid = (string) ($record['practitioner_id'] ?? '');
+        return $pid !== '' && $pid === $practitionerId;
     }
 }

@@ -79,20 +79,6 @@ class Core
         }
 
         $received  = $this->getReceivedApiKey();
-        $config    = $this->grav()['config'];
-        $mainKey   = trim((string) $config->get('plugins.cabinet.api_key', ''));
-        $pushToken = trim((string) $config->get('plugins.cabinet.sms_push_token', ''));
-
-        if (!empty($mainKey) && $received === $mainKey) {
-            $this->apiKeyPractitionerId = $this->getLegacyPractitionerId();
-            return;
-        }
-
-        if (!empty($pushToken) && $received === $pushToken) {
-            $this->apiKeyPractitionerId = $this->getLegacyPractitionerId();
-            return;
-        }
-
         if ($this->checkUserApiKey($received)) {
             return;
         }
@@ -226,15 +212,6 @@ class Core
             return (string) ($user->username ?? '');
         }
         return $this->apiKeyPractitionerId ?? '';
-    }
-
-    /**
-     * Username that owns legacy records created before multi-user support.
-     * Defaults to 'ngoub' but is overridable via plugins.cabinet.legacy_practitioner_id.
-     */
-    public function getLegacyPractitionerId(): string
-    {
-        return (string) Grav::instance()['config']->get('plugins.cabinet.legacy_practitioner_id', 'ngoub');
     }
 
     /**

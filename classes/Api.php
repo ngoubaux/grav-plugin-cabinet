@@ -222,6 +222,16 @@ class Api
             $this->profile->regenerateApiKey();
         }
 
+        if ($path === $apiBase . '/profile/template-upload' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->profile->uploadTemplate();
+        }
+
+        if ($path === $apiBase . '/admin/migrate-practitioner-id' && $method === 'POST') {
+            $this->core->requireGravSession();
+            $this->seances->migratePractitionerIdToCurrentUser();
+        }
+
         $this->core->jsonExit(['error' => 'Route not found'], 404);
     }
 
@@ -322,20 +332,15 @@ class Api
     private function serveTemplate(string $configKey, string $downloadName, string $fallbackConfigKey = null): void
     {
         $grav    = Grav::instance();
-        $config  = $grav['config'];
-        $locator = $grav['locator'];
         $default = dirname(__DIR__) . '/assets/Fiche Client - Shiatsu.pdf';
         $file    = null;
 
         foreach (array_filter([$configKey, $fallbackConfigKey]) as $key) {
-            $data = $config->get('plugins.cabinet.' . $key, []);
-            if (!empty($data) && is_array($data)) {
-                $entry = array_key_first($data);
-                $resolved = $locator->findResource($entry, true) ?: (GRAV_ROOT . DS . ltrim(str_replace('/', DS, $entry), DS));
-                if ($resolved && file_exists($resolved)) {
-                    $file = $resolved;
-                    break;
-                }
+            $data = $this->core->getPractitionerConfig($key, []);
+            $resolved = $this->resolveTemplatePath($data);
+            if ($resolved !== null) {
+                $file = $resolved;
+                break;
             }
         }
 
@@ -354,6 +359,60 @@ class Api
         header('Content-Length: ' . filesize($file));
         readfile($file);
         exit;
+    }
+
+    private function resolveTemplatePath($value): ?string
+    {
+        // Legacy Grav file field format: array where key is the stored path.
+        if (is_array($value) && !empty($value)) {
+            $candidate = '';
+            $firstKey = array_key_first($value);
+            if (is_string($firstKey) && $firstKey !== '') {
+                $candidate = $firstKey;
+            } elseif (isset($value['path']) && is_string($value['path'])) {
+                $candidate = (string) $value['path'];
+            } elseif (isset($value[0]) && is_string($value[0])) {
+                $candidate = (string) $value[0];
+            }
+
+            if ($candidate !== '') {
+                return $this->resolveTemplatePathCandidate($candidate);
+            }
+
+            return null;
+        }
+
+        // Practitioner profile format: direct string path.
+        if (is_string($value) && trim($value) !== '') {
+            return $this->resolveTemplatePathCandidate(trim($value));
+        }
+
+        return null;
+    }
+
+    private function resolveTemplatePathCandidate(string $candidate): ?string
+    {
+        $locator = Grav::instance()['locator'];
+
+        if (strpos($candidate, '://') !== false) {
+            $resolved = $locator->findResource($candidate, true);
+            if (is_string($resolved) && file_exists($resolved)) {
+                return $resolved;
+            }
+        }
+
+        if (file_exists($candidate)) {
+            return $candidate;
+        }
+
+        $resolved = $locator->findResource($candidate, true)
+            ?: (GRAV_ROOT . DS . ltrim(str_replace('/', DS, $candidate), DS));
+
+        if (is_string($resolved) && file_exists($resolved)) {
+            return $resolved;
+        }
+
+        return null;
     }
 
     private function serveAsset(string $name, string $type): void

@@ -1,7 +1,8 @@
 {% set help_url     = base_url_absolute %}
 {% set help_key     = config.plugins.cabinet.api_key %}
-{% set help_prov    = config.plugins.cabinet.sms_provider %}
-{% set help_enabled = config.plugins.cabinet.sms_enabled %}
+{% set help_cabinet = grav.user ? (grav.user.get('cabinet') ?: {}) : {} %}
+{% set help_prov    = help_cabinet.sms_provider ?? 'smsmobileapi' %}
+{% set help_enabled = help_cabinet.sms_enabled ?? false %}
 {% set help_key_ok  = help_key and help_key != 'CHANGE_ME_BEFORE_DEPLOY' %}
 
 <div x-show="$store.cab.showHelp" class="px-5 py-5 overflow-y-auto flex-1"

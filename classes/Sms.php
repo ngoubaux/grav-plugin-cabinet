@@ -96,6 +96,7 @@ class Sms
         $obj->created_at  = date('c');
         $obj->transport   = 'android_queue';
         $obj->client_uuid = $clientUuid;
+        $obj->practitioner_id = $this->resolvePractitionerId();
         $obj->save();
 
         $this->core->debugLog('SMS queued for Android', ['id' => $id, 'to' => $phone]);
@@ -247,6 +248,7 @@ class Sms
     {
         $tomorrow = (new \DateTime('tomorrow'))->format('Y-m-d');
         $results  = ['sent' => 0, 'skipped' => 0, 'errors' => []];
+        $practitionerId = $this->core->getCurrentPractitionerId();
 
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
@@ -261,7 +263,10 @@ class Sms
         }
 
         foreach ($rdvDir->getCollection() as $record) {
-            $data = method_exists($record, 'toArray') ? $record->toArray() : [];
+            $data = $this->flexObjectToArray($record);
+            if (!$this->belongsToPractitioner($data, $practitionerId)) {
+                continue;
+            }
 
             // Only tomorrow
             if (($data['appointment_date'] ?? '') !== $tomorrow) {
@@ -292,6 +297,10 @@ class Sms
             $clientUuid = (string) ($data['contact_uuid'] ?? '');
             $client     = $clientsDir->getObject($clientUuid);
             if (!$client) {
+                $results['skipped']++;
+                continue;
+            }
+            if (!$this->belongsToPractitioner($this->flexObjectToArray($client), $practitionerId)) {
                 $results['skipped']++;
                 continue;
             }
@@ -376,6 +385,10 @@ class Sms
             $this->core->jsonExit(['ok' => false, 'error' => 'Client non trouvé'], 404);
             return;
         }
+        if (!$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($client))) {
+            $this->core->jsonExit(['ok' => false, 'error' => 'Forbidden'], 403);
+            return;
+        }
 
         $phone = (string) ($client->phone1 ?? '');
         if ($phone === '') {
@@ -416,7 +429,7 @@ class Sms
 
     private function getProvider(): string
     {
-        $provider = trim((string) Grav::instance()['config']->get('plugins.cabinet.sms_provider', self::DEFAULT_PROVIDER));
+        $provider = trim((string) $this->core->getPractitionerConfig('sms_provider', self::DEFAULT_PROVIDER));
         if ($provider === '') {
             return self::DEFAULT_PROVIDER;
         }
@@ -520,10 +533,8 @@ class Sms
      */
     private function buildPreparationMessage($client, string $clientId): string
     {
-        $grav = Grav::instance();
-
         // Get template from config
-        $template = (string) $grav['config']->get('plugins.cabinet.communication_template_prep_visite', '');
+        $template = (string) $this->core->getPractitionerConfig('communication_template_prep_visite', '');
         if ($template === '') {
             return '';
         }
@@ -544,9 +555,10 @@ class Sms
     {
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
+        $practitionerId = $this->core->getCurrentPractitionerId();
 
         $firstName = (string) ($client->first_name ?? '');
-        $googleReviewUrl = (string) $grav['config']->get('plugins.cabinet.communication_google_review_url', '');
+        $googleReviewUrl = (string) $this->core->getPractitionerConfig('communication_google_review_url', '');
         $sessionSlot = '';
         $duration = '1h15';
         $sessionDate = '';
@@ -557,8 +569,10 @@ class Sms
             if ($rdvDir) {
                 $sessions = [];
                 foreach ($rdvDir->getCollection() as $record) {
-                    if (($record->contact_uuid ?? '') === $clientId) {
-                        $sessions[] = method_exists($record, 'toArray') ? $record->toArray() : (array) $record;
+                    $recordData = $this->flexObjectToArray($record);
+                    if (($recordData['contact_uuid'] ?? '') === $clientId
+                        && $this->belongsToPractitioner($recordData, $practitionerId)) {
+                        $sessions[] = $recordData;
                     }
                 }
 
@@ -650,5 +664,44 @@ class Sms
             return "{$h}h";
         }
         return "{$m} min";
+    }
+
+    private function flexObjectToArray($object): array
+    {
+        if (is_array($object)) {
+            return $object;
+        }
+        if (!is_object($object)) {
+            return [];
+        }
+        if (method_exists($object, 'toArray')) {
+            $data = $object->toArray();
+            return is_array($data) ? $data : [];
+        }
+        if (method_exists($object, 'jsonSerialize')) {
+            $data = $object->jsonSerialize();
+            return is_array($data) ? $data : [];
+        }
+        return [];
+    }
+
+    private function resolvePractitionerId(): string
+    {
+        $id = $this->core->getCurrentPractitionerId();
+        return $id;
+    }
+
+    private function belongsToPractitioner(array $record, string $practitionerId): bool
+    {
+        if ($practitionerId === '') {
+            return false;
+        }
+        $pid = (string) ($record['practitioner_id'] ?? '');
+        return $pid !== '' && $pid === $practitionerId;
+    }
+
+    private function isOwnedByCurrentPractitioner(array $record): bool
+    {
+        return $this->belongsToPractitioner($record, $this->core->getCurrentPractitionerId());
     }
 }

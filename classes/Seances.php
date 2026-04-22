@@ -51,6 +51,7 @@ class Seances
                 'google_calendar_id'     => (string) $this->core->getPractitionerConfig('google_calendar_id', ''),
                 'drive_bilan_path'       => (string) $this->core->getPractitionerConfig('drive_bilan_path', 'onyx/NoteAir5c/Cahiers/clients'),
                 'sms_enabled'            => (bool)   $this->core->getPractitionerConfig('sms_enabled', false),
+                'sms_provider'           => (string) $this->core->getPractitionerConfig('sms_provider', 'smsmobileapi'),
                 'communication_google_review_url'       => (string) $this->core->getPractitionerConfig('communication_google_review_url', ''),
                 'communication_template_prep_visite'    => (string) $this->core->getPractitionerConfig('communication_template_prep_visite', ''),
                 'communication_template_relance'        => (string) $this->core->getPractitionerConfig('communication_template_relance', ''),
@@ -115,6 +116,9 @@ class Seances
         if (!$contact) {
             $this->core->jsonExit(['error' => 'Client not found'], 404);
         }
+        if (!$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($contact))) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
+        }
 
         $this->applyClientFields($contact, $data, $uuid);
         if ($contact->save() === false) {
@@ -129,6 +133,9 @@ class Seances
         $uuid = $this->normalizeUuid($id);
         $dir = $this->requireClientsDirectory();
         $contact = $dir->getObject($uuid);
+        if ($contact && !$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($contact))) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
+        }
         if ($contact && method_exists($contact, 'delete')) {
             $contact->delete();
         }
@@ -144,6 +151,15 @@ class Seances
         $contactUuid = $this->normalizeUuid((string) ( $data['client_id'] ?? ''));
         if ($contactUuid === '') {
             $this->core->jsonExit(['error' => 'client_id required'], 400);
+        }
+
+        $clientsDir = $this->requireClientsDirectory();
+        $contact = $clientsDir->getObject($contactUuid);
+        if (!$contact) {
+            $this->core->jsonExit(['error' => 'Client not found'], 404);
+        }
+        if (!$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($contact))) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
         }
 
         $sessionId = (string) ($data['id'] ?? '');
@@ -173,6 +189,9 @@ class Seances
         if (!$record) {
             $this->core->jsonExit(['error' => 'Rendez-vous not found'], 404);
         }
+        if (!$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($record))) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
+        }
 
         $contactUuid = (string) ($record->contact_uuid ?? '');
         $sessionId = (string) ($record->session_id ?? $flexId);
@@ -188,10 +207,41 @@ class Seances
     {
         $dir = $this->requireRendezVousDirectory();
         $record = $dir->getObject($flexId);
+        if ($record && !$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($record))) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
+        }
         if ($record && method_exists($record, 'delete')) {
             $record->delete();
         }
         $this->core->jsonExit(['ok' => true]);
+    }
+
+    public function migratePractitionerIdToCurrentUser(): void
+    {
+        $practitionerId = $this->core->getCurrentPractitionerId();
+        if ($practitionerId === '') {
+            $this->core->jsonExit(['error' => 'Practitioner context required'], 401);
+        }
+
+        $grav = Grav::instance();
+        $flex = $grav['flex'] ?? null;
+        if (!$flex) {
+            $this->core->jsonExit(['error' => 'Flex not available'], 500);
+        }
+
+        $clientsDir = $this->getClientsDirectory($flex);
+        $rendezVousDir = $this->getRendezVousDirectory($flex);
+        $communicationsDir = $this->getCommunicationsDirectory($flex);
+
+        $result = [
+            'ok' => true,
+            'practitioner_id' => $practitionerId,
+            'clients' => $this->migrateDirectoryPractitionerId($clientsDir, $practitionerId),
+            'rendez_vous' => $this->migrateDirectoryPractitionerId($rendezVousDir, $practitionerId),
+            'communications' => $this->migrateDirectoryPractitionerId($communicationsDir, $practitionerId),
+        ];
+
+        $this->core->jsonExit($result);
     }
 
     // ── Private CRUD helpers ──────────────────────────────────────────────────
@@ -292,7 +342,6 @@ class Seances
         $rendezVousDir = $this->getRendezVousDirectory($flex);
 
         $practitionerId = $this->core->getCurrentPractitionerId();
-        $legacyId       = $this->core->getLegacyPractitionerId();
 
         $sessions = [];
         $rendezVousRecords = [];
@@ -300,7 +349,7 @@ class Seances
         if ($rendezVousDir) {
             foreach ($rendezVousDir->getCollection() as $storageKey => $record) {
                 $arr = $this->flexObjectToArray($record);
-                if (!$this->belongsToPractitioner($arr, $practitionerId, $legacyId)) {
+                if (!$this->belongsToPractitioner($arr, $practitionerId)) {
                     continue;
                 }
                 $arr['_flex_key'] = (string) $storageKey;
@@ -326,7 +375,7 @@ class Seances
 
         foreach ($clientsDir->getCollection() as $uuid => $contact) {
             $data = $this->flexObjectToArray($contact);
-            if (!$this->belongsToPractitioner($data, $practitionerId, $legacyId)) {
+            if (!$this->belongsToPractitioner($data, $practitionerId)) {
                 continue;
             }
 
@@ -627,6 +676,32 @@ class Seances
         return $flex->getDirectory('clients');
     }
 
+    private function getCommunicationsDirectory($flex)
+    {
+        if (!$flex) {
+            return null;
+        }
+
+        $directory = $flex->getDirectory('communications');
+        if ($directory) {
+            return $directory;
+        }
+
+        $blueprint = dirname(__DIR__) . '/blueprints/flex-objects/communications.yaml';
+        if (!file_exists($blueprint)) {
+            return null;
+        }
+
+        try {
+            $flex->addDirectoryType('communications', $blueprint);
+        } catch (\Throwable $e) {
+            $this->core->debugLog('communications addDirectoryType failed', ['error' => $e->getMessage()]);
+            return null;
+        }
+
+        return $flex->getDirectory('communications');
+    }
+
     private function flexStatusToSessionStatus(string $status): string
     {
         $status = strtolower(trim($status));
@@ -669,7 +744,10 @@ class Seances
     private function resolvePractitionerId(): string
     {
         $id = $this->core->getCurrentPractitionerId();
-        return $id !== '' ? $id : $this->core->getLegacyPractitionerId();
+        if ($id === '') {
+            $this->core->jsonExit(['error' => 'Practitioner context required'], 401);
+        }
+        return $id;
     }
 
     /**
@@ -677,15 +755,53 @@ class Seances
      * Records with an empty practitioner_id are treated as belonging to the legacy owner.
      * When $practitionerId is '' (API-key-only request), all records are visible.
      */
-    private function belongsToPractitioner(array $record, string $practitionerId, string $legacyId): bool
+    private function belongsToPractitioner(array $record, string $practitionerId): bool
     {
         if ($practitionerId === '') {
-            return true;
+            return false;
         }
         $pid = (string) ($record['practitioner_id'] ?? '');
-        if ($pid === '') {
-            $pid = $legacyId;
+        return $pid !== '' && $pid === $practitionerId;
+    }
+
+    private function isOwnedByCurrentPractitioner(array $record): bool
+    {
+        return $this->belongsToPractitioner($record, $this->core->getCurrentPractitionerId());
+    }
+
+    private function migrateDirectoryPractitionerId($dir, string $practitionerId): array
+    {
+        $stats = ['scanned' => 0, 'updated' => 0, 'already_set' => 0, 'errors' => 0];
+        if (!$dir) {
+            return $stats;
         }
-        return $pid === $practitionerId;
+
+        foreach ($dir->getCollection() as $storageKey => $record) {
+            $stats['scanned']++;
+            $arr = $this->flexObjectToArray($record);
+            $pid = trim((string) ($arr['practitioner_id'] ?? ''));
+            if ($pid !== '') {
+                $stats['already_set']++;
+                continue;
+            }
+
+            try {
+                $obj = $dir->getObject((string) $storageKey);
+                if (!$obj) {
+                    $stats['errors']++;
+                    continue;
+                }
+                $obj->practitioner_id = $practitionerId;
+                if ($obj->save() === false) {
+                    $stats['errors']++;
+                    continue;
+                }
+                $stats['updated']++;
+            } catch (\Throwable $e) {
+                $stats['errors']++;
+            }
+        }
+
+        return $stats;
     }
 }

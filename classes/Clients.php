@@ -37,17 +37,13 @@ class Clients
         }
 
         $practitionerId = $this->core->getCurrentPractitionerId();
-        $legacyId       = $this->core->getLegacyPractitionerId();
 
         foreach ($dir->getCollection() as $uuid => $obj) {
             $data = $this->flexObjectToArray($obj);
 
             if ($practitionerId !== '') {
                 $pid = (string) ($data['practitioner_id'] ?? '');
-                if ($pid === '') {
-                    $pid = $legacyId;
-                }
-                if ($pid !== $practitionerId) {
+                if ($pid === '' || $pid !== $practitionerId) {
                     continue;
                 }
             }

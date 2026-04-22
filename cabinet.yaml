@@ -1,8 +1,5 @@
 enabled: true
 
-# Praticien propriétaire des enregistrements sans practitioner_id (données antérieures au multi-utilisateur)
-legacy_practitioner_id: 'ngoub'
-
 # Routes configurables
 route_app_base: '/cabinet'       # Slug de la page Cabinet (ex: /cabinet, /mon-espace, /mypractice)
 route_api_base: '/api/cabinet'   # Base des endpoints API métier
@@ -14,32 +11,6 @@ api_key: 'CHANGE_ME_BEFORE_DEPLOY'
 # Origine CORS (* = toutes origines)
 allowed_origin: '*'
 
-google_oauth_client_id: ''
-google_calendar_id: ''
-drive_bilan_path: 'onyx/NoteAir5c/Cahiers/clients'
-
 sms_enabled: false
 # android_queue = file d'attente polled par MacroDroid ou Termux sur Android (gratuit, sans app tierce)
-sms_provider: 'smsmobileapi'
-sms_simple_gateway_url: ''
-sms_push_token: ''
-sms_http_gateway_url: ''
-sms_http_gateway_token: ''
 sms_rappel_cron: '0 8 * * *'
-
-communication_google_review_url: ''
-communication_template_prep_visite: "Bonjour {{first_name}},\n\nAfin de préparer notre première séance{{session_slot}}, je vous partage ce lien : {{preparation_link}}\n\n⏱️ Durée : {{duration}}\n\nÀ bientôt !"
-communication_template_relance: ''
-communication_template_compte_rendu: "Bonjour {{first_name}},\n\nMerci pour votre confiance suite à notre séance{{session_date_label}}.\n\nSi vous avez trouvé l'accompagnement utile, vous pouvez laisser un avis :\n{{google_review_url}}\n\nBien à vous"
-
-# ── Informations praticien (utilisées dans l'email de bienvenue) ──────────────
-practitioner_name: 'Nicolas Goubaux'
-practitioner_title: 'Praticien Shiatsu – Médiateur de bien-être intérieur'
-practitioner_phone: '0664313056'
-practitioner_website: 'https://www.goubs.net'
-practitioner_booking_url: 'https://www.resalib.fr/praticien/90790-nicolas-goubaux-praticien-shiatsu-cagnes-sur-mer'
-practitioner_address_street: '60 Chemin du Val Fleuri'
-practitioner_address_details: 'Bât. B6 Appt. 08 – 3ème étage, porte de gauche (à droite de la piscine)'
-practitioner_address_city: '06800 Cagnes-sur-Mer'
-practitioner_access_code: '2507A'
-practitioner_first_session_price: '75'

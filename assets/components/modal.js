@@ -174,7 +174,9 @@ function cabinetSettingsModal() {
       practitioner_address_city: '', practitioner_access_code: '',
       practitioner_first_session_price: '',
       google_oauth_client_id: '', google_calendar_id: '', drive_bilan_path: '',
+      template_client_pdf: '', template_seance_pdf: '',
       sms_enabled: false,
+      sms_provider: 'smsmobileapi',
       communication_google_review_url: '',
       communication_template_prep_visite: '',
       communication_template_relance: '',
@@ -185,6 +187,10 @@ function cabinetSettingsModal() {
     pageSize: 7,
     apiKeyMasked: '',
     hasApiKey: false,
+    templateUploading: {
+      template_client_pdf: false,
+      template_seance_pdf: false,
+    },
 
     init() {
       this.$watch('$store.cab.modal.open', (open) => {
@@ -238,6 +244,42 @@ function cabinetSettingsModal() {
         this.hasApiKey     = true;
         this.apiKeyVisible = true;
         showToast('Nouvelle clé API générée');
+      }
+    },
+
+    async uploadTemplate(templateKey, event) {
+      const file = event?.target?.files?.[0] || null;
+      if (!file) return;
+
+      if (file.type && file.type !== 'application/pdf') {
+        showToast('Seuls les fichiers PDF sont autorisés', 'error');
+        event.target.value = '';
+        return;
+      }
+
+      this.templateUploading[templateKey] = true;
+      try {
+        const fd = new FormData();
+        fd.append('template_key', templateKey);
+        fd.append('file', file);
+
+        const r = await fetch(getApiUrl('/profile/template-upload'), {
+          method: 'POST',
+          body: fd,
+        });
+        const data = await r.json();
+        if (!r.ok || !data?.ok) {
+          showToast(data?.error || 'Erreur upload template', 'error');
+          return;
+        }
+
+        this.form[templateKey] = data.path || '';
+        showToast('Template uploadé');
+      } catch (e) {
+        showToast('Erreur réseau upload template', 'error');
+      } finally {
+        this.templateUploading[templateKey] = false;
+        if (event?.target) event.target.value = '';
       }
     },
 

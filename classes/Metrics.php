@@ -17,6 +17,7 @@ class Metrics
     {
         $grav = Grav::instance();
         $flex = $grav['flex'] ?? null;
+        $practitionerId = $this->core->getCurrentPractitionerId();
 
         $clients          = [];
         $rendezVousRecords = [];
@@ -25,7 +26,11 @@ class Metrics
             $clientsDir = $flex->getDirectory('clients');
             if ($clientsDir) {
                 foreach ($clientsDir->getCollection() as $uuid => $obj) {
-                    $clients[(string) $uuid] = $this->toArray($obj);
+                    $arr = $this->toArray($obj);
+                    if (!$this->belongsToPractitioner($arr, $practitionerId)) {
+                        continue;
+                    }
+                    $clients[(string) $uuid] = $arr;
                 }
             }
 
@@ -33,6 +38,9 @@ class Metrics
             if ($rvDir) {
                 foreach ($rvDir->getCollection() as $key => $obj) {
                     $arr          = $this->toArray($obj);
+                    if (!$this->belongsToPractitioner($arr, $practitionerId)) {
+                        continue;
+                    }
                     $arr['_flex_key'] = (string) $key;
                     $rendezVousRecords[] = $arr;
                 }
@@ -166,5 +174,14 @@ class Metrics
             return is_array($d) ? $d : [];
         }
         return [];
+    }
+
+    private function belongsToPractitioner(array $record, string $practitionerId): bool
+    {
+        if ($practitionerId === '') {
+            return false;
+        }
+        $pid = (string) ($record['practitioner_id'] ?? '');
+        return $pid !== '' && $pid === $practitionerId;
     }
 }

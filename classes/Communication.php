@@ -23,12 +23,11 @@ class Communication
         }
 
         $practitionerId = $this->core->getCurrentPractitionerId();
-        $legacyId       = $this->core->getLegacyPractitionerId();
 
         foreach ($dir->getCollection() as $storageKey => $record) {
             $arr = $this->flexObjectToArray($record);
 
-            if (!$this->belongsToPractitioner($arr, $practitionerId, $legacyId)) {
+            if (!$this->belongsToPractitioner($arr, $practitionerId)) {
                 continue;
             }
 
@@ -65,8 +64,12 @@ class Communication
         $uuid = $this->normalizeUuid($id);
 
         $clients = $this->requireClientsDirectory();
-        if (!$clients->getObject($uuid)) {
+        $client = $clients->getObject($uuid);
+        if (!$client) {
             $this->core->jsonExit(['error' => 'Client not found'], 404);
+        }
+        if (!$this->isOwnedByCurrentPractitioner($this->flexObjectToArray($client))) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
         }
 
         $entries = is_array($data['communications'] ?? null) ? $data['communications'] : [];
@@ -222,9 +225,13 @@ class Communication
     {
         $dir = $this->requireCommunicationsDirectory();
         $items = [];
+        $practitionerId = $this->core->getCurrentPractitionerId();
 
         foreach ($dir->getCollection() as $storageKey => $record) {
             $arr = $this->flexObjectToArray($record);
+            if (!$this->belongsToPractitioner($arr, $practitionerId)) {
+                continue;
+            }
             if (strtolower((string) ($arr['channel'] ?? '')) !== 'sms') {
                 continue;
             }
@@ -260,6 +267,9 @@ class Communication
         }
 
         $arr = $this->flexObjectToArray($obj);
+        if (!$this->isOwnedByCurrentPractitioner($arr)) {
+            $this->core->jsonExit(['error' => 'Forbidden'], 403);
+        }
         if (strtolower((string) ($arr['channel'] ?? '')) !== 'sms') {
             $this->core->jsonExit(['error' => 'Not an SMS record'], 400);
         }
@@ -309,18 +319,23 @@ class Communication
     private function resolvePractitionerId(): string
     {
         $id = $this->core->getCurrentPractitionerId();
-        return $id !== '' ? $id : $this->core->getLegacyPractitionerId();
+        if ($id === '') {
+            $this->core->jsonExit(['error' => 'Practitioner context required'], 401);
+        }
+        return $id;
     }
 
-    private function belongsToPractitioner(array $record, string $practitionerId, string $legacyId): bool
+    private function belongsToPractitioner(array $record, string $practitionerId): bool
     {
         if ($practitionerId === '') {
-            return true;
+            return false;
         }
         $pid = (string) ($record['practitioner_id'] ?? '');
-        if ($pid === '') {
-            $pid = $legacyId;
-        }
-        return $pid === $practitionerId;
+        return $pid !== '' && $pid === $practitionerId;
+    }
+
+    private function isOwnedByCurrentPractitioner(array $record): bool
+    {
+        return $this->belongsToPractitioner($record, $this->core->getCurrentPractitionerId());
     }
 }

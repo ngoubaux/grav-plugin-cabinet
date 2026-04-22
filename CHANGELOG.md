@@ -1,4 +1,22 @@
-<!-- markdownlint-disable MD022 MD051 -->
+<!-- markdownlint-disable MD022 MD024 MD025 MD051 -->
+
+# 2.0.3
+
+## 04/22/2026
+
+1. [](#new)
+   * Sécurisation multi-praticiens : enforcement strict du `practitioner_id` sur les opérations de lecture/édition/suppression (clients, rendez-vous, communications, SMS queue, métriques, imports).
+   * Ajout de l'endpoint admin `POST {route_api_base}/admin/migrate-practitioner-id` pour renseigner automatiquement `practitioner_id` sur les données existantes.
+   * Ajout du script `user/plugins/cabinet/scripts/migrate-practitioner-id.sh` pour exécuter la migration en production.
+   * API profile praticien enrichie : prise en charge de `sms_provider`, `template_client_pdf`, `template_seance_pdf`.
+
+1. [](#improved)
+   * Auth API durcie : suppression du fallback legacy global, résolution par clé API utilisateur (`user/accounts/*.yaml`, section `cabinet.api_key`).
+   * Provider SMS piloté par praticien (profil utilisateur), avec conservation des fallbacks legacy nécessaires à la rétrocompatibilité.
+   * Templates PDF bilan basculés côté praticien (`template_client_pdf`, `template_seance_pdf`) avec fallback global legacy puis PDF intégré.
+   * Nettoyage de la configuration plugin : suppression des doublons praticien dans le blueprint admin, conservation des seuls paramètres système globaux.
+   * Documentation et aide UI mises à jour pour refléter la séparation "config système globale" vs "config praticien".
+   * Bouton Changelog admin : correction visuelle de la couleur de texte pour garantir un contraste lisible.
 
 # 2.0.2
 

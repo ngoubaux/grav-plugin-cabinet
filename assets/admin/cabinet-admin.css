@@ -156,3 +156,19 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Changelog button in plugin blueprint (fix .form-tabs.subtle override) */
+.form-tabs.subtle a.button.cab-changelog-btn,
+.form-tabs.subtle a.button.cab-changelog-btn:visited,
+.form-tabs.subtle a.button.cab-changelog-btn:focus {
+  color: #ffffff !important;
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+}
+
+.form-tabs.subtle a.button.cab-changelog-btn:hover,
+.form-tabs.subtle a.button.cab-changelog-btn:active {
+  color: #ffffff !important;
+  background: #7dd3fc !important;
+  border-color: #7dd3fc !important;
+}

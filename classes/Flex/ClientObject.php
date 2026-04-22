@@ -75,19 +75,6 @@ class ClientObject extends GenericObject
             }
         }
 
-        // Fallback : si aucun practitioner_id défini sur le client, utiliser le compte 'ngoub'.
-        if (empty($cabinet)) {
-            $fallbackFile = GRAV_ROOT . '/user/accounts/ngoub.yaml';
-            if (is_file($fallbackFile)) {
-                try {
-                    $data    = \Grav\Common\Yaml::parse((string) file_get_contents($fallbackFile));
-                    $cabinet = is_array($data['cabinet'] ?? null) ? $data['cabinet'] : [];
-                } catch (\Throwable $e) {
-                    // fall through to global config
-                }
-            }
-        }
-
         $global = Grav::instance()['config'];
         $keys   = [
             'practitioner_name', 'practitioner_title', 'practitioner_phone',
