@@ -181,20 +181,30 @@
           </div>
           <div class="field field-full">
             <label>Template PDF fiche client (praticien)</label>
-            <input x-model="form.template_client_pdf" placeholder="user/data/cabinet/templates/FicheTemplate_client.pdf">
-            <span class="field-hint">Chemin local vers le PDF utilisé comme fiche vierge client. Si vide, fallback sur la configuration globale puis le PDF intégré.</span>
+            <span class="field-hint">PDF utilisé comme fiche vierge client. Si aucun template praticien n'est défini, le fallback global puis le PDF intégré sont utilisés.</span>
             <div class="mt-2 flex items-center gap-2">
-              <input type="file" accept="application/pdf" @change="uploadTemplate('template_client_pdf', $event)">
-              <span class="text-[11px] text-zinc-500" x-show="templateUploading.template_client_pdf">Upload en cours…</span>
+              <label class="btn-ghost btn-sm cursor-pointer">
+                <span x-show="!templateUploading.template_client_pdf">📂 Choisir un PDF…</span>
+                <span x-show="templateUploading.template_client_pdf">Upload en cours…</span>
+                <input type="file" accept="application/pdf" class="hidden" :disabled="templateUploading.template_client_pdf" @change="uploadTemplate('template_client_pdf', $event)">
+              </label>
+              <a class="btn-ghost btn-sm" :href="(window.CABINET_ROUTE_APP || '/cabinet') + '/client-template.pdf'" target="_blank" rel="noopener">
+                Ouvrir
+              </a>
             </div>
           </div>
           <div class="field field-full">
             <label>Template PDF fiche séance (praticien)</label>
-            <input x-model="form.template_seance_pdf" placeholder="user/data/cabinet/templates/FicheTemplate_rendezvous.pdf">
-            <span class="field-hint">Chemin local vers le PDF ajouté à chaque séance. Si vide, fallback sur template client praticien, puis global, puis PDF intégré.</span>
+            <span class="field-hint">PDF ajouté à chaque séance. Si vide, fallback sur template client praticien, puis global, puis PDF intégré.</span>
             <div class="mt-2 flex items-center gap-2">
-              <input type="file" accept="application/pdf" @change="uploadTemplate('template_seance_pdf', $event)">
-              <span class="text-[11px] text-zinc-500" x-show="templateUploading.template_seance_pdf">Upload en cours…</span>
+              <label class="btn-ghost btn-sm cursor-pointer">
+                <span x-show="!templateUploading.template_seance_pdf">📂 Choisir un PDF…</span>
+                <span x-show="templateUploading.template_seance_pdf">Upload en cours…</span>
+                <input type="file" accept="application/pdf" class="hidden" :disabled="templateUploading.template_seance_pdf" @change="uploadTemplate('template_seance_pdf', $event)">
+              </label>
+              <a class="btn-ghost btn-sm" :href="(window.CABINET_ROUTE_APP || '/cabinet') + '/seance-template.pdf'" target="_blank" rel="noopener">
+                Ouvrir
+              </a>
             </div>
           </div>
         </div>

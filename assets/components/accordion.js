@@ -46,11 +46,14 @@ function cabinetBilan() {
         .map(([k, cls]) => ({val: k, cls, label: MERIDIAN_STATES.find(s => s.val === k)?.label || k}));
     },
 
-    async uploadTemplate() {
-      await uploadBilanTemplate(Alpine.store('cab').activeId);
+    appendingSeance: false,
+    sendingTemplate: false,
+    async sendBilanTemplate() {
+      this.sendingTemplate = true;
+      try { await uploadBilanTemplate(Alpine.store('cab').activeId); }
+      finally { this.sendingTemplate = false; }
     },
 
-    appendingSeance: false,
     async appendSeanceTemplate() {
       this.appendingSeance = true;
       try { await appendSeanceTemplate(Alpine.store('cab').activeId); }
@@ -58,3 +61,4 @@ function cabinetBilan() {
     },
   };
 }
+

@@ -110,7 +110,7 @@ form:
             templates_notice:
               type: display
               label: Templates PDF des bilans
-              content: "Les templates PDF fiche client / fiche séance sont maintenant définis au niveau praticien, dans Paramètres > Google (profil Cabinet)."
+              content: "Les templates PDF fiche client / fiche séance sont configurés au niveau praticien via l'onglet Google des Paramètres de l'application Cabinet."
 
             sms_section:
               type: section

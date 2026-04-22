@@ -38,8 +38,9 @@
             x-text="(($store.cab.activeClient?.first_name || '') + ' ' + ($store.cab.activeClient?.last_name || '')).trim() + '.pdf'"></code>
     </span>
     <div class="mt-2.5">
-      <button class="btn-ghost text-[12px]!" @click="uploadTemplate()">
-        Envoyer la fiche vierge sur Drive →
+      <button class="btn-ghost text-[12px]!" :disabled="sendingTemplate" @click="sendBilanTemplate()">
+        <span x-show="!sendingTemplate">Envoyer la fiche vierge sur Drive →</span>
+        <span x-show="sendingTemplate">Envoi en cours…</span>
       </button>
     </div>
   </div>

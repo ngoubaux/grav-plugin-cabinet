@@ -150,19 +150,18 @@ class Profile
             $this->core->jsonExit(['ok' => false, 'error' => 'Seuls les fichiers PDF sont autorisés'], 400);
         }
 
-        $mime = '';
         if (function_exists('finfo_open')) {
             $finfo = @finfo_open(FILEINFO_MIME_TYPE);
             if ($finfo) {
                 $mime = (string) @finfo_file($finfo, $tmpPath);
                 @finfo_close($finfo);
+                if ($mime !== '' && !in_array($mime, ['application/pdf', 'application/x-pdf', 'application/octet-stream'], true)) {
+                    $this->core->jsonExit(['ok' => false, 'error' => 'Type MIME non autorisé: ' . $mime], 400);
+                }
             }
         }
-        if ($mime !== '' && !in_array($mime, ['application/pdf', 'application/x-pdf', 'application/octet-stream'], true)) {
-            $this->core->jsonExit(['ok' => false, 'error' => 'Type MIME non autorisé: ' . $mime], 400);
-        }
 
-        $user = Grav::instance()['user'];
+        $user     = Grav::instance()['user'];
         $username = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string) ($user->username ?? 'user')) ?: 'user';
 
         $targetDir = GRAV_ROOT . '/user/data/cabinet/templates';
@@ -170,8 +169,8 @@ class Profile
             $this->core->jsonExit(['ok' => false, 'error' => 'Impossible de créer le dossier templates'], 500);
         }
 
-        $baseName = $templateKey === 'template_client_pdf' ? 'FicheTemplate_client' : 'FicheTemplate_rendezvous';
-        $filename = $baseName . '_' . $username . '.pdf';
+        $baseName  = $templateKey === 'template_client_pdf' ? 'FicheTemplate_client' : 'FicheTemplate_rendezvous';
+        $filename  = $baseName . '_' . $username . '.pdf';
         $targetAbs = $targetDir . '/' . $filename;
         $targetRel = 'user/data/cabinet/templates/' . $filename;
 
@@ -189,10 +188,10 @@ class Profile
         $user->save();
 
         $this->core->jsonExit([
-            'ok' => true,
+            'ok'           => true,
             'template_key' => $templateKey,
-            'path' => $targetRel,
-            'filename' => $filename,
+            'path'         => $targetRel,
+            'filename'     => $filename,
         ]);
     }
 

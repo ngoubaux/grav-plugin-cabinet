@@ -247,6 +247,10 @@ function cabinetSettingsModal() {
       }
     },
 
+    toggleKeyVisibility() {
+      this.apiKeyVisible = !this.apiKeyVisible;
+    },
+
     async uploadTemplate(templateKey, event) {
       const file = event?.target?.files?.[0] || null;
       if (!file) return;
@@ -281,10 +285,6 @@ function cabinetSettingsModal() {
         this.templateUploading[templateKey] = false;
         if (event?.target) event.target.value = '';
       }
-    },
-
-    toggleKeyVisibility() {
-      this.apiKeyVisible = !this.apiKeyVisible;
     },
   };
 }

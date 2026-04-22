@@ -119,7 +119,7 @@ class ClientObject extends GenericObject
                 . ' le **' . $this->formatDate((string) ($rdv->appointment_date ?? ''))
                 . '** à **' . (string) ($rdv->appointment_hour ?? '') . '**.';
         } else {
-            $appointmentIntro = "**Note :** Vous n'avez pas encore de prochain rendez-vous planifié.";
+            $appointmentIntro = "<strong>Note :</strong> Vous n'avez pas encore de prochain rendez-vous planifié.";
             if ($bookingUrl !== '') {
                 $appointmentIntro .= "\n\n[Prendre un rendez-vous](" . $bookingUrl . ')';
             }
@@ -132,13 +132,13 @@ class ClientObject extends GenericObject
         }
 
         if ($hasExchangeTag) {
-            $SessionHighlight = "**Note :** Vous avez choisi une séance d'échange. Nous pourrons discuter ensemble de vos besoins et attentes lors de notre rencontre.";
+            $SessionHighlight = "<strong>Note :</strong> Vous avez choisi une séance d'échange. Nous pourrons discuter ensemble de vos besoins et attentes lors de notre rencontre.";
         } elseif ($rdv) {
-            $SessionHighlight = 'Pour cette rencontre, je vous propose une séance de **'
+            $SessionHighlight = 'Pour cette rencontre, je vous propose une séance de <strong>'
                 . (string) ($rdv->duration_minutes ?? '')
-                . ' min** au tarif de **'
+                . ' min</strong> au tarif de <strong>'
                 . (string) ($config['practitioner_first_session_price'] ?? '')
-                . "€**.";
+                . "€</strong>.";
         } else {
             $SessionHighlight = 'Nous définirons ensemble la formule la plus adaptée à votre accompagnement lors de votre première visite.';
         }
